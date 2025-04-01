@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         KRUNKER.IO AIMBOT + WALLHACK + ESP + MORE [BETA]
+// @name         2025 KRUNKER.IO AIMBOT + WALLHACK + ESP + MORE [BETA]
 // @namespace    http://krunkmods.hidden
 // @version      0.9.7b
 // @description  Experimental mod menu for Krunker.io. Includes silent aimbot, ESP, wireframe players, FOV, recoil bypass, wallhack (BETA). Toggle with [O]. Use at your own risk.
@@ -7,6 +7,7 @@
 // @match        https://krunker.io/*
 // @grant        none
 // @run-at       document-start
+// @license      MIT
 // ==/UserScript==
 
 let Is_LOGGED = false;
