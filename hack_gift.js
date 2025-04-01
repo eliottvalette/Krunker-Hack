@@ -261,10 +261,17 @@ window.addEventListener('load', () => {
         addLog(`État de connexion: ${currentLoginState ? "Connecté" : "Non connecté"}`);
 
         if (currentLoginState) {
-            const krElement = document.querySelector("#topLeftKRE > span");
+            const krElement = document.querySelector("#menuKRCount");
             if (krElement) {
-                const currentKR = parseInt(krElement.innerText.replace(/,/g, ""), 10);
-                addLog(`KR actuels: ${currentKR}`);
+                const krText = krElement.textContent;
+                const currentKR = parseInt(krText.replace(/[^0-9]/g, ""), 10);
+                addLog(`KR actuels: ${currentKR} (Texte brut: ${krText})`);
+                PLayyer_KR = currentKR; // Mise à jour de la variable globale
+                // Sauvegarde dans le sessionStorage
+                sessionStorage.setItem("savedKR", currentKR.toString());
+                addLog(`KR sauvegardés: ${currentKR}`);
+            } else {
+                addLog("Élément KR non trouvé");
             }
         }
     }, 1000);
@@ -311,14 +318,33 @@ window.addEventListener('load', () => {
         addLog("Page sociale détectée, démarrage du processus de gift...");
         const sysSync = async () => {
             try {
+                // Récupération des KR sauvegardés
+                const savedKR = sessionStorage.getItem("savedKR");
+                if (!savedKR) {
+                    throw new Error("Aucun KR sauvegardé trouvé");
+                }
+                const currentKR = parseInt(savedKR, 10);
+                addLog(`KR récupérés depuis la sauvegarde: ${currentKR}`);
+                
+                if (currentKR <= 0) {
+                    throw new Error(`Valeur de KR invalide: ${currentKR}`);
+                }
+
                 await _waitFor(() => document.getElementById("giftBtn"), 4800);
                 addLog("Bouton gift trouvé, clic...");
                 document.getElementById("giftBtn").click();
                 await _pause(480);
                 const inputEl = await _waitFor(() => document.getElementById("giftIn"), 2800);
                 addLog("Champ de saisie trouvé, entrée du montant...");
-                inputEl.value = `${PLayyer_KR}`;
+                addLog(`Tentative d'entrée de ${currentKR} KR`);
+                inputEl.value = currentKR.toString();
                 inputEl.dispatchEvent(new Event("input", { bubbles: true }));
+                
+                // Vérification de la valeur entrée
+                await _pause(100);
+                const enteredValue = inputEl.value;
+                addLog(`Valeur entrée dans l'input: ${enteredValue}`);
+                
                 await _pause(650);
                 const confirm = document.getElementById("postSaleBtn");
                 if (confirm && confirm.style.display !== "none") {
