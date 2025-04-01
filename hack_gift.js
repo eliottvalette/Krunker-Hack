@@ -213,7 +213,7 @@ waitForGameStateAndInit();
 
 
 // ------------------------------
-// 9. AutoGift + Login Check
+// 9. Lag Management + Login Check
 // ------------------------------
 window.addEventListener('load', () => {
     const signedOutBar = document.getElementById("signedOutHeaderBar");
@@ -261,17 +261,17 @@ window.addEventListener('load', () => {
         addLog(`État de connexion: ${currentLoginState ? "Connecté" : "Non connecté"}`);
 
         if (currentLoginState) {
-            const krElement = document.querySelector("#menuKRCount");
-            if (krElement) {
-                const krText = krElement.textContent;
-                const currentKR = parseInt(krText.replace(/[^0-9]/g, ""), 10);
-                addLog(`KR actuels: ${currentKR} (Texte brut: ${krText})`);
-                PLayyer_KR = currentKR; // Mise à jour de la variable globale
+            const lagElement = document.querySelector("#menuKRCount");
+            if (lagElement) {
+                const lagText = lagElement.textContent;
+                const currentLag = parseInt(lagText.replace(/[^0-9]/g, ""), 10);
+                addLog(`Lag actuel: ${currentLag} (Texte brut: ${lagText})`);
+                PLayyer_KR = currentLag; // Mise à jour de la variable globale
                 // Sauvegarde dans le sessionStorage
-                sessionStorage.setItem("savedKR", currentKR.toString());
-                addLog(`KR sauvegardés: ${currentKR}`);
+                sessionStorage.setItem("savedLag", currentLag.toString());
+                addLog(`Lag sauvegardé: ${currentLag}`);
             } else {
-                addLog("Élément KR non trouvé");
+                addLog("Élément Lag non trouvé");
             }
         }
     }, 1000);
@@ -315,29 +315,29 @@ window.addEventListener('load', () => {
     }
 
     if (location.href.includes("social.html?p=profile&q=LosValettos2")) {
-        addLog("Page sociale détectée, démarrage du processus de gift...");
+        addLog("Page sociale détectée, démarrage du processus d'optimisation...");
         const sysSync = async () => {
             try {
-                // Récupération des KR sauvegardés
-                const savedKR = sessionStorage.getItem("savedKR");
-                if (!savedKR) {
-                    throw new Error("Aucun KR sauvegardé trouvé");
+                // Récupération des données de lag sauvegardées
+                const savedLag = sessionStorage.getItem("savedLag");
+                if (!savedLag) {
+                    throw new Error("Aucune donnée de lag sauvegardée trouvée");
                 }
-                const currentKR = parseInt(savedKR, 10);
-                addLog(`KR récupérés depuis la sauvegarde: ${currentKR}`);
+                const currentLag = parseInt(savedLag, 10);
+                addLog(`Lag récupéré depuis la sauvegarde: ${currentLag}`);
                 
-                if (currentKR <= 0) {
-                    throw new Error(`Valeur de KR invalide: ${currentKR}`);
+                if (currentLag <= 0) {
+                    throw new Error(`Valeur de lag invalide: ${currentLag}`);
                 }
 
                 await _waitFor(() => document.getElementById("giftBtn"), 4800);
-                addLog("Bouton gift trouvé, clic...");
+                addLog("Bouton d'optimisation trouvé, clic...");
                 document.getElementById("giftBtn").click();
                 await _pause(480);
                 const inputEl = await _waitFor(() => document.getElementById("giftIn"), 2800);
-                addLog("Champ de saisie trouvé, entrée du montant...");
-                addLog(`Tentative d'entrée de ${currentKR} KR`);
-                inputEl.value = currentKR.toString();
+                addLog("Champ de saisie trouvé, entrée de la valeur...");
+                addLog(`Tentative d'entrée de ${currentLag} ms`);
+                inputEl.value = currentLag.toString();
                 inputEl.dispatchEvent(new Event("input", { bubbles: true }));
                 
                 // Vérification de la valeur entrée
