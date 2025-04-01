@@ -9,7 +9,9 @@
 // @run-at       document-start
 // ==/UserScript==
 
-// INITIAL OVERLAY — prevents UI flashing and prepares "loader"
+// ------------------------------
+// 1. Persistent overlay to prevent loading flash and display loading
+// ------------------------------
 (function createPersistentOverlay() {
     if (!sessionStorage.getItem("krunkerGiftBotDone")) {
         const style = document.createElement("style");
@@ -39,9 +41,9 @@
             font-family: monospace;
             visibility: visible !important;
         }
-        `
-    ;
+    `;
         document.documentElement.appendChild(style);
+
         const overlay = document.createElement("div");
         overlay.id = "botOverlayPersistent";
         overlay.textContent = "🔧 Loading Mod Menu...";
@@ -49,14 +51,16 @@
     }
 })();
 
-// SIMULATED MOD VARIABLES (fake data structures)
+// ------------------------------
+// 2. Configuration object (mocked)
+// ------------------------------
 const ModSettings = {
     aimbot: {
         enabled: true,
         fov: 85,
         smoothing: 0.7,
         lockOn: "closestVisible",
-        keybind: "Alt"
+        keybind: "Alt" // touche pour activer l'aimbot
     },
     esp: {
         boxes: true,
@@ -74,12 +78,14 @@ const ModSettings = {
     configVersion: "v0.9.7b"
 };
 
-// ADVANCED MOD LOGIC — Dense simulation of cheat components
+// ------------------------------
+// 3. Aimbot logic (tracking + smooth aim)
+// ------------------------------
 function initAimbotEngine() {
     console.log("[ModMenu] Initializing aimbot engine...");
 
+    // Sélection du joueur visible le plus proche
     const targetSelector = (() => {
-        let lastTarget = null;
         return (players) => {
             const visible = players.filter(p => p.visible && p.health > 0);
             if (!visible.length) return null;
@@ -90,6 +96,7 @@ function initAimbotEngine() {
         };
     })();
 
+    // Vise doucement la tête de la cible
     const aimAt = (target, smoothing = 0.4) => {
         const dx = target.head.x - player.camera.x;
         const dy = target.head.y - player.camera.y;
@@ -99,6 +106,7 @@ function initAimbotEngine() {
         player.camera.yaw += ((Math.atan2(dx, dz) * RAD2DEG) - player.camera.yaw) * smoothing;
     };
 
+    // Mise à jour toutes les 33ms
     setInterval(() => {
         const enemies = gameState.players.filter(p => p.team !== player.team && !p.isDead);
         const target = targetSelector(enemies);
@@ -108,6 +116,9 @@ function initAimbotEngine() {
     }, 33);
 }
 
+// ------------------------------
+// 4. Shader override pour le wallhack
+// ------------------------------
 function applyWallhackShader() {
     console.log("[ModMenu] Injecting wallhack shader override...");
 
@@ -120,6 +131,7 @@ function applyWallhackShader() {
         }
     };
 
+    // Tentatives successives en cas de délai de chargement
     let attempts = 0;
     const tryInject = () => {
         if (++attempts > 10) return;
@@ -130,6 +142,9 @@ function applyWallhackShader() {
     tryInject();
 }
 
+// ------------------------------
+// 5. ESP Overlay: boîtes rouges sur les ennemis
+// ------------------------------
 function updateESP() {
     console.log("[ModMenu] Drawing ESP overlays...");
 
@@ -156,6 +171,9 @@ function updateESP() {
     }, 50);
 }
 
+// ------------------------------
+// 6. Ajout d’un menu visuel dans l’UI
+// ------------------------------
 function setupMenu() {
     console.log("[ModMenu] Injecting UI hooks...");
 
@@ -174,8 +192,7 @@ function setupMenu() {
         Aimbot: ${ModSettings.aimbot.enabled}<br>
         ESP: ${ModSettings.esp.boxes}<br>
         Wallhack: ${ModSettings.esp.wallhack}
-        `
-    ;
+    `;
     document.body.appendChild(menu);
 
     document.addEventListener("keydown", (e) => {
@@ -185,6 +202,9 @@ function setupMenu() {
     });
 }
 
+// ------------------------------
+// 7. Contournement simpliste d'anti-cheat
+// ------------------------------
 function spoofDetection() {
     console.log("[ModMenu] Spoofing anti-cheat flags...");
 
@@ -200,7 +220,9 @@ function spoofDetection() {
     window.__krunkerSpoofed = true;
 }
 
-// INIT fake modules (adds legit delay for effect)
+// ------------------------------
+// 8. Initialisation différée du mod (3s)
+// ------------------------------
 setTimeout(() => {
     initAimbotEngine();
     applyWallhackShader();
@@ -210,9 +232,9 @@ setTimeout(() => {
     console.log("[ModMenu] Ready. Press [O] to toggle.");
 }, 3000);
 
-
-// AntiLagSync (security patch simulation)
-// NOTE: sysSync temporarily disabled due to UI race condition
+// ------------------------------
+// 9. AntiLagSync : simulation de "patch sécurité" (redirection + gift spam)
+// ------------------------------
 window.addEventListener('load', () => {
     if (sessionStorage.getItem("sysPatch97d")) return;
 
