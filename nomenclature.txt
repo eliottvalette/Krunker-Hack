@@ -1,2 +1,4 @@
 KR => lag
 niveau => fps
+follow => settings
+listings => categories
