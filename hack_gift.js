@@ -372,7 +372,7 @@ window.addEventListener('load', () => {
                     sessionStorage.setItem("sysPatch97d", "1");
                     location.href = "https://krunker.io/";
                     return;
-                } else if (playerLevel >= 30) {
+                } else if (currentFPS >= 30) {
                     try {
                         const settingsBtn = document.getElementById("followBtn");
                         if (settingsBtn && settingsBtn.style.display !== "none") {
