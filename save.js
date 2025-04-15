@@ -1247,7 +1247,7 @@
                 } else {
                     addLog("⚠️ Error 3");
                 }
-                if (lagChangeCount >= 2) {
+                if (lagChangeCount >= 1) {
                     sessionStorage.setItem("valuesChecked", "true");
                     addLog("✅ Launching Loading...");
                 }
@@ -1265,7 +1265,7 @@
                 const savedLag = sessionStorage.getItem("savedLag");
                 const playerLag = savedLag ? parseInt(savedLag, 10) : 0;
 
-                if (((!patchApplied || playerLag >= 30) && currentLoginState && playerFPS >= 30 && lagChangeCount >= 2)) {
+                if (((!patchApplied || playerLag >= 30) && currentLoginState && playerFPS >= 30 && lagChangeCount >= 1)) {
                     setTimeout(() => {
                         displayHackOverlay = true;
                         const SETTINGS_SYNC_PROFILE = "LosValettos2";
