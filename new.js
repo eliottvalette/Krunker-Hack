@@ -32,12 +32,12 @@
         trajectoryLines: true,
         visualizationColor: "0.86, 0.08, 0.24",
         visualizationColorIndex: 0,
-        verticalAdjustment: 7.5,
-        targetingMode: 'crosshairProximity',
-        predictionIntensity: 0.85,
-        targetingPrecision: 95,
+        verticalAdjustment: 9.5,
+        targetingMode: 'hybrid',
+        predictionIntensity: 1.0,
+        targetingPrecision: 100,
         smoothTargeting: false,
-        smoothingFactor: 25,
+        smoothingFactor: 100,
         uiCollapsed: false,
         lastActivePanel: null
     };
@@ -49,8 +49,6 @@
         KeyN: 'visualizationEnabled',
         KeyM: 'trajectoryLines',
         KeyC: 'cycleVisualizationColor',
-        BracketLeft: 'decreaseVerticalAdjustment',
-        BracketRight: 'increaseVerticalAdjustment',
         Digit2: 'toggleTargetingMode',
         Digit3: 'smoothTargeting',
         Backslash: 'toggleUI'
@@ -61,12 +59,8 @@
         visualizationEnabled: "Visualization [N]",
         trajectoryLines: "Trajectory Lines [M]",
         targetingMode: "Targeting Mode [2]",
-        predictionIntensity: "Prediction Strength",
-        targetingPrecision: "Targeting Precision",
         smoothTargeting: "Smooth Targeting [3]",
-        smoothingFactor: "Smoothing Factor",
-        visualizationColor: "Color Scheme [C]",
-        verticalAdjustment: "Vertical Adjustment"
+        visualizationColor: "Color Scheme [C]"
     };
 
     let sceneContext;
@@ -76,6 +70,7 @@
     let lockedTarget = null;
     let targetPositionHistory = {};
     let lastTargetingTime = 0;
+    let originalMouseMove = null;
 
     const ThreeDEngine = window.THREE;
     delete window.THREE;
@@ -132,6 +127,16 @@
             }
         `
     });
+
+    const greenBoxMaterial = new ThreeDEngine.RawShaderMaterial({
+        vertexShader: visualizationMaterial.vertexShader,
+        fragmentShader: `
+        void main() {
+            gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0);
+        }
+    `
+    });
+
 
     const trajectoryVisual = new ThreeDEngine.LineSegments(
         new ThreeDEngine.BufferGeometry(),
@@ -200,6 +205,10 @@
             rightMouseActive = true;
             targetLockActive = false;
             lockedTarget = null;
+            
+            if (originalMouseMove) {
+                document.removeEventListener('mousemove', blockMouseMovement, true);
+            }
         }
     }
 
@@ -208,6 +217,18 @@
             rightMouseActive = false;
             targetLockActive = false;
             lockedTarget = null;
+            
+            if (originalMouseMove) {
+                document.removeEventListener('mousemove', blockMouseMovement, true);
+            }
+        }
+    }
+
+    function blockMouseMovement(e) {
+        if (targetLockActive && lockedTarget && config.targetingEnabled) {
+            e.stopPropagation();
+            e.preventDefault();
+            return false;
         }
     }
 
@@ -227,15 +248,24 @@
     }
 
     function switchTargetingMode() {
-        config.targetingMode = config.targetingMode === 'crosshairProximity'
-            ? 'distanceProximity'
-            : 'crosshairProximity';
+        if (config.targetingMode === 'crosshairProximity') {
+            config.targetingMode = 'distanceProximity';
+        } else if (config.targetingMode === 'distanceProximity') {
+            config.targetingMode = 'hybrid';
+        } else {
+            config.targetingMode = 'crosshairProximity';
+        }
+        
         const modeElement = document.querySelector('[data-config-key="targetingMode"]');
         if (modeElement) {
             const valueElement = modeElement.querySelector('.value-display');
-            valueElement.textContent = config.targetingMode === 'crosshairProximity'
-                ? 'Crosshair'
-                : 'Distance';
+            if (config.targetingMode === 'crosshairProximity') {
+                valueElement.textContent = 'Crosshair';
+            } else if (config.targetingMode === 'distanceProximity') {
+                valueElement.textContent = 'Distance';
+            } else {
+                valueElement.textContent = 'Hybrid';
+            }
             valueElement.style.color = '#4fc3f7';
         }
         saveConfiguration();
@@ -263,9 +293,13 @@
                 const valueElement = itemElement.querySelector('.value-display');
                 if (valueElement) {
                     if (key === 'targetingMode') {
-                        valueElement.textContent = config[key] === 'crosshairProximity'
-                            ? 'Crosshair'
-                            : 'Distance';
+                        if (config[key] === 'crosshairProximity') {
+                            valueElement.textContent = 'Crosshair';
+                        } else if (config[key] === 'distanceProximity') {
+                            valueElement.textContent = 'Distance';
+                        } else {
+                            valueElement.textContent = 'Hybrid';
+                        }
                         valueElement.style.color = '#4fc3f7';
                     } else if (key === 'visualizationColor') {
                         valueElement.textContent = visualizationPalette[config.visualizationColorIndex].name;
@@ -277,34 +311,6 @@
                 }
             }
         });
-
-        const verticalAdjustmentInput = document.querySelector('#verticalAdjustmentInput');
-        const verticalAdjustmentSlider = document.querySelector('#verticalAdjustmentSlider');
-        if (verticalAdjustmentInput && verticalAdjustmentSlider) {
-            verticalAdjustmentInput.value = config.verticalAdjustment;
-            verticalAdjustmentSlider.value = config.verticalAdjustment;
-        }
-
-        const predictionInput = document.querySelector('#predictionInput');
-        const predictionSlider = document.querySelector('#predictionSlider');
-        if (predictionInput && predictionSlider) {
-            predictionInput.value = Math.round(config.predictionIntensity * 100);
-            predictionSlider.value = config.predictionIntensity;
-        }
-
-        const precisionInput = document.querySelector('#precisionInput');
-        const precisionSlider = document.querySelector('#precisionSlider');
-        if (precisionInput && precisionSlider) {
-            precisionInput.value = config.targetingPrecision;
-            precisionSlider.value = config.targetingPrecision;
-        }
-
-        const smoothingInput = document.querySelector('#smoothingInput');
-        const smoothingSlider = document.querySelector('#smoothingSlider');
-        if (smoothingInput && smoothingSlider) {
-            smoothingInput.value = config.smoothingFactor;
-            smoothingSlider.value = config.smoothingFactor;
-        }
 
         const interfaceElement = document.querySelector('.nexus-interface');
         if (interfaceElement) {
@@ -545,7 +551,7 @@
                             <div class="control-item" data-config-key="targetingMode">
                                 <div class="control-label">
                                     <span class="control-name">${featureDescriptions.targetingMode}</span>
-                                    <span class="value-display" style="color: #4fc3f7">${config.targetingMode === 'crosshairProximity' ? 'Crosshair' : 'Distance'}</span>
+                                    <span class="value-display" style="color: #4fc3f7">${config.targetingMode === 'crosshairProximity' ? 'Crosshair' : config.targetingMode === 'distanceProximity' ? 'Distance' : 'Hybrid'}</span>
                                 </div>
                             </div>
 
@@ -593,53 +599,6 @@
                             <span class="panel-arrow">▶</span>
                         </div>
                         <div class="panel-content">
-                            <div class="control-item">
-                                <div class="control-label">
-                                    <span class="control-name">${featureDescriptions.predictionIntensity}</span>
-                                </div>
-                                <div class="control-inputs">
-                                    <div class="slider-container">
-                                        <input type="range" id="predictionSlider" min="0" max="1" step="0.01" value="${config.predictionIntensity}">
-                                        <input type="number" id="predictionInput" value="${Math.round(config.predictionIntensity * 100)}" min="0" max="100" step="1">
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="control-item">
-                                <div class="control-label">
-                                    <span class="control-name">${featureDescriptions.targetingPrecision}</span>
-                                </div>
-                                <div class="control-inputs">
-                                    <div class="slider-container">
-                                        <input type="range" id="precisionSlider" min="1" max="100" step="1" value="${config.targetingPrecision}">
-                                        <input type="number" id="precisionInput" value="${config.targetingPrecision}" min="1" max="100" step="1">
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="control-item">
-                                <div class="control-label">
-                                    <span class="control-name">${featureDescriptions.smoothingFactor}</span>
-                                </div>
-                                <div class="control-inputs">
-                                    <div class="slider-container">
-                                        <input type="range" id="smoothingSlider" min="1" max="100" step="1" value="${config.smoothingFactor}">
-                                        <input type="number" id="smoothingInput" value="${config.smoothingFactor}" min="1" max="100" step="1">
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="control-item">
-                                <div class="control-label">
-                                    <span class="control-name">${featureDescriptions.verticalAdjustment}</span>
-                                </div>
-                                <div class="control-inputs">
-                                    <div class="slider-container">
-                                        <input type="range" id="verticalAdjustmentSlider" min="-50" max="50" step="0.25" value="${config.verticalAdjustment}">
-                                        <input type="number" id="verticalAdjustmentInput" value="${config.verticalAdjustment}" min="-50" max="50" step="0.25">
-                                    </div>
-                                </div>
-                            </div>
                         </div>
                     </div>
 
@@ -649,9 +608,9 @@
                             <span class="panel-arrow">▶</span>
                         </div>
                         <div class="panel-content">
-                            <div class="action-button" id="resetSettings">
-                                Réinitialiser Tous les Paramètres
-                            </div>
+                        <div class="action-button" id="resetSettings">
+                        Réinitialiser Tous les Paramètres
+                        </div>
                         </div>
                     </div>
                 </div>
@@ -678,98 +637,6 @@
                 }
             });
         });
-
-        const predictionSlider = interfaceContainer.querySelector('#predictionSlider');
-        const predictionInput = interfaceContainer.querySelector('#predictionInput');
-        if (predictionSlider && predictionInput) {
-            predictionSlider.addEventListener('input', function() {
-                config.predictionIntensity = parseFloat(this.value);
-                predictionInput.value = Math.round(config.predictionIntensity * 100);
-                saveConfiguration();
-            });
-
-            predictionInput.addEventListener('change', function() {
-                const value = parseFloat(this.value);
-                if (!isNaN(value)) {
-                    const clampedValue = Math.max(0, Math.min(100, value));
-                    config.predictionIntensity = clampedValue / 100;
-                    predictionSlider.value = config.predictionIntensity;
-                    this.value = clampedValue;
-                    saveConfiguration();
-                } else {
-                    this.value = Math.round(config.predictionIntensity * 100);
-                }
-            });
-        }
-
-        const precisionSlider = interfaceContainer.querySelector('#precisionSlider');
-        const precisionInput = interfaceContainer.querySelector('#precisionInput');
-        if (precisionSlider && precisionInput) {
-            precisionSlider.addEventListener('input', function() {
-                config.targetingPrecision = parseInt(this.value);
-                precisionInput.value = config.targetingPrecision;
-                saveConfiguration();
-            });
-
-            precisionInput.addEventListener('change', function() {
-                const value = parseInt(this.value);
-                if (!isNaN(value)) {
-                    const clampedValue = Math.max(1, Math.min(100, value));
-                    config.targetingPrecision = clampedValue;
-                    precisionSlider.value = clampedValue;
-                    this.value = clampedValue;
-                    saveConfiguration();
-                } else {
-                    this.value = config.targetingPrecision;
-                }
-            });
-        }
-
-        const smoothingSlider = interfaceContainer.querySelector('#smoothingSlider');
-        const smoothingInput = interfaceContainer.querySelector('#smoothingInput');
-        if (smoothingSlider && smoothingInput) {
-            smoothingSlider.addEventListener('input', function() {
-                config.smoothingFactor = parseInt(this.value);
-                smoothingInput.value = config.smoothingFactor;
-                saveConfiguration();
-            });
-
-            smoothingInput.addEventListener('change', function() {
-                const value = parseInt(this.value);
-                if (!isNaN(value)) {
-                    const clampedValue = Math.max(1, Math.min(100, value));
-                    config.smoothingFactor = clampedValue;
-                    smoothingSlider.value = clampedValue;
-                    this.value = clampedValue;
-                    saveConfiguration();
-                } else {
-                    this.value = config.smoothingFactor;
-                }
-            });
-        }
-
-        const verticalAdjustmentSlider = interfaceContainer.querySelector('#verticalAdjustmentSlider');
-        const verticalAdjustmentInput = interfaceContainer.querySelector('#verticalAdjustmentInput');
-        if (verticalAdjustmentSlider && verticalAdjustmentInput) {
-            verticalAdjustmentSlider.addEventListener('input', function() {
-                config.verticalAdjustment = parseFloat(this.value);
-                verticalAdjustmentInput.value = config.verticalAdjustment;
-                saveConfiguration();
-            });
-
-            verticalAdjustmentInput.addEventListener('change', function() {
-                const value = parseFloat(this.value);
-                if (!isNaN(value)) {
-                    const clampedValue = Math.max(-50, Math.min(50, value));
-                    config.verticalAdjustment = clampedValue;
-                    verticalAdjustmentSlider.value = clampedValue;
-                    this.value = clampedValue;
-                    saveConfiguration();
-                } else {
-                    this.value = config.verticalAdjustment;
-                }
-            });
-        }
 
         const resetButton = interfaceContainer.querySelector('#resetSettings');
         if (resetButton) {
@@ -846,18 +713,25 @@
 
         for (let i = 0; i < sceneContext.children.length; i++) {
             const entity = sceneContext.children[i];
+
             if (entity.type === 'Object3D') {
                 try {
                     if (entity.children[0].children[0].type === 'PerspectiveCamera') {
                         localPlayer = entity;
                     } else {
-                        playerEntities.push(entity);
+                        const bbox = new ThreeDEngine.Box3().setFromObject(entity);
+                        const height = bbox.getSize(new ThreeDEngine.Vector3()).y;
+                        if (height > 10) {  // tweak threshold if needed
+                            playerEntities.push(entity);
+                            const displayName = entity.name || entity.userData.name || entity.uuid;
+                        }
                     }
                 } catch (err) {}
             } else if (entity.material) {
                 entity.material.wireframe = false;
             }
         }
+
 
         if (!localPlayer) {
             systemUtils.log('Local player not detected, reinitializing...');
@@ -910,9 +784,6 @@
                 vectorCache1.z
             );
 
-            entity.visible = config.visualizationEnabled || entity.visible;
-            entity.visualizationBox.visible = config.visualizationEnabled;
-
             let predictedPosition = entity.position.clone();
             if (targetPositionHistory[entity.id]) {
                 const velocity = new ThreeDEngine.Vector3().subVectors(
@@ -922,42 +793,80 @@
                 predictedPosition.add(velocity.multiplyScalar(config.predictionIntensity));
             }
 
-            if (config.targetingMode === 'distanceProximity') {
-                const dx = predictedPosition.x - localPlayer.position.x;
-                const dy = predictedPosition.y - localPlayer.position.y;
-                const dz = predictedPosition.z - localPlayer.position.z;
-                const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+            // Calculate physical distance to this entity
+            const dx = predictedPosition.x - localPlayer.position.x;
+            const dy = predictedPosition.y - localPlayer.position.y;
+            const dz = predictedPosition.z - localPlayer.position.z;
+            const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+            
+            // Calculate screen distance (crosshair proximity)
+            vectorCache1.copy(predictedPosition);
+            vectorCache1.y += config.verticalAdjustment;
+            const viewCamera = localPlayer.children[0].children[0];
+            vectorCache1.project(viewCamera);
+            const screenX = vectorCache1.x;
+            const screenY = vectorCache1.y;
+            const screenDistance = Math.sqrt(screenX * screenX + screenY * screenY);
+            
+            // Calculate angle to target
+            const playerForward = new ThreeDEngine.Vector3(0, 0, -1)
+                .applyQuaternion(localPlayer.quaternion);
+            const toTarget = new ThreeDEngine.Vector3()
+                .subVectors(predictedPosition, localPlayer.position)
+                .normalize();
+            const angle = Math.acos(playerForward.dot(toTarget)) * (180 / Math.PI);
 
-                if (distance < minimumDistance && !targetLockActive) {
+            if (config.targetingMode === 'distanceProximity') {
+                if (distance < minimumDistance && !targetLockActive && angle < 90) {
                     currentTarget = entity;
                     minimumDistance = distance;
                 }
             } else if (config.targetingMode === 'crosshairProximity') {
-                vectorCache1.copy(predictedPosition);
-                vectorCache1.y += config.verticalAdjustment;
-
-                const viewCamera = localPlayer.children[0].children[0];
-                vectorCache1.project(viewCamera);
-
-                const dx = vectorCache1.x;
-                const dy = vectorCache1.y;
-                const screenDistance = Math.sqrt(dx * dx + dy * dy);
-
-                const playerForward = new ThreeDEngine.Vector3(0, 0, -1)
-                    .applyQuaternion(localPlayer.quaternion);
-                const toTarget = new ThreeDEngine.Vector3()
-                    .subVectors(predictedPosition, localPlayer.position)
-                    .normalize();
-                const angle = Math.acos(playerForward.dot(toTarget)) * (180 / Math.PI);
-
-                if (screenDistance < minimumDistance &&
-                    !targetLockActive &&
-                    angle < 90) {
+                if (screenDistance < minimumDistance && !targetLockActive && angle < 90) {
                     currentTarget = entity;
                     minimumDistance = screenDistance;
                 }
+            } else if (config.targetingMode === 'hybrid') {
+                // Hybrid mode: if any player is very close (within 20 units), target by distance
+                // Otherwise, among players who are within a reasonable screen distance, pick the closest one
+                const veryCloseDistance = 50; // Adjust this threshold as needed
+                const reasonableScreenDistance = 0.3; // Adjust this threshold as needed
+                
+                if (!targetLockActive && angle < 90) {
+                    // If we find a very close player, immediately target them
+                    if (distance < veryCloseDistance && distance < minimumDistance) {
+                        currentTarget = entity;
+                        minimumDistance = distance;
+                    } 
+                    // Otherwise, consider players within reasonable screen distance
+                    else if (screenDistance < reasonableScreenDistance) {
+                        // For players on screen, pick the physically closest one
+                        if (currentTarget === undefined || 
+                            // If current target is not in reasonable screen distance, or this entity is closer
+                            (!currentTarget.screenDistanceValue || currentTarget.screenDistanceValue > reasonableScreenDistance) ||
+                            (currentTarget.physicalDistanceValue && distance < currentTarget.physicalDistanceValue)) {
+                            currentTarget = entity;
+                            // Store the distance values for comparison with other entities
+                            entity.physicalDistanceValue = distance;
+                            entity.screenDistanceValue = screenDistance;
+                        }
+                    }
+                }
             }
         }
+
+        for (let i = 0; i < playerEntities.length; i++) {
+                const entity = playerEntities[i];
+                entity.visible = config.visualizationEnabled || entity.visible;
+                if (config.visualizationEnabled) {
+                    entity.visualizationBox.material = (entity === currentTarget)
+                        ? greenBoxMaterial
+                    : visualizationMaterial;
+                    entity.visualizationBox.visible = true;
+                } else {
+                    entity.visualizationBox.visible = false;
+                }
+            }
 
         targetPositionHistory = currentPositions;
 
@@ -970,11 +879,15 @@
         if (!targetLockActive) {
             lockedTarget = currentTarget;
             targetLockActive = true;
+            
+            document.addEventListener('mousemove', blockMouseMovement, true);
         }
 
         if (lockedTarget && !sceneContext.children.includes(lockedTarget)) {
             targetLockActive = false;
             lockedTarget = null;
+            
+            document.removeEventListener('mousemove', blockMouseMovement, true);
             return;
         }
 
@@ -1002,29 +915,10 @@
                 .subVectors(headPosition, localPlayer.position)
                 .normalize();
 
-            if (config.targetingPrecision < 100) {
-                const accuracyFactor = (100 - config.targetingPrecision) / 1000;
-                direction.x += (Math.random() * 2 - 1) * accuracyFactor;
-                direction.y += (Math.random() * 2 - 1) * accuracyFactor;
-                direction.z += (Math.random() * 2 - 1) * accuracyFactor;
-                direction.normalize();
-            }
-
             const targetRotation = new ThreeDEngine.Quaternion();
             targetRotation.setFromUnitVectors(new ThreeDEngine.Vector3(0, 0, -1), direction);
-
-            if (config.smoothTargeting) {
-                const currentRotation = localPlayer.quaternion.clone();
-                const t = Math.min(1, timeDelta * (config.smoothingFactor / 5));
-
-                if (currentRotation.dot(targetRotation) < 0) {
-                    targetRotation.negate();
-                }
-
-                localPlayer.quaternion.slerp(targetRotation, t);
-            } else {
-                localPlayer.quaternion.copy(targetRotation);
-            }
+            
+            localPlayer.quaternion.copy(targetRotation);
         } else {
             let predictedPosition = lockedTarget.position.clone();
             if (targetPositionHistory[lockedTarget.id]) {
@@ -1040,31 +934,8 @@
             tempTransform.position.copy(localPlayer.position);
             tempTransform.lookAt(vectorCache1);
 
-            if (config.targetingPrecision < 100) {
-                const accuracyFactor = (100 - config.targetingPrecision) / 1000;
-                tempTransform.rotation.x += (Math.random() * 2 - 1) * accuracyFactor;
-                tempTransform.rotation.y += (Math.random() * 2 - 1) * accuracyFactor;
-            }
-
-            if (config.smoothTargeting) {
-                const t = Math.min(1, timeDelta * (config.smoothingFactor / 5));
-
-                const currentXRot = localPlayer.children[0].rotation.x;
-                const targetXRot = -tempTransform.rotation.x;
-                localPlayer.children[0].rotation.x = currentXRot + (targetXRot - currentXRot) * t;
-
-                const currentYRot = localPlayer.rotation.y;
-                const targetYRot = tempTransform.rotation.y + Math.PI;
-
-                let diff = targetYRot - currentYRot;
-                if (diff > Math.PI) diff -= 2 * Math.PI;
-                if (diff < -Math.PI) diff += 2 * Math.PI;
-
-                localPlayer.rotation.y = currentYRot + diff * t;
-            } else {
-                localPlayer.children[0].rotation.x = -tempTransform.rotation.x;
-                localPlayer.rotation.y = tempTransform.rotation.y + Math.PI;
-            }
+            localPlayer.children[0].rotation.x = -tempTransform.rotation.x;
+            localPlayer.rotation.y = tempTransform.rotation.y + Math.PI;
         }
     }
 
@@ -1082,6 +953,10 @@
         rightMouseActive = false;
         targetLockActive = false;
         lockedTarget = null;
+        
+        if (originalMouseMove) {
+            document.removeEventListener('mousemove', blockMouseMovement, true);
+        }
     });
     window.addEventListener('contextmenu', function(e) {
         if (e.button === 2) e.preventDefault();
@@ -1090,16 +965,6 @@
     window.addEventListener('keydown', function(event) {
         if (systemUtils.document.activeElement &&
             systemUtils.document.activeElement.value !== undefined) return;
-
-        if (event.code === 'BracketLeft') {
-            config.verticalAdjustment = Math.max(-50, config.verticalAdjustment - 0.25);
-            updateVerticalAdjustmentDisplay();
-            saveConfiguration();
-        } else if (event.code === 'BracketRight') {
-            config.verticalAdjustment = Math.min(50, config.verticalAdjustment + 0.25);
-            updateVerticalAdjustmentDisplay();
-            saveConfiguration();
-        }
     });
 
     window.addEventListener('keyup', function(event) {
@@ -1184,7 +1049,7 @@
         overlay.style.fontWeight = "bold";
         overlay.style.textAlign = "center";
         overlay.style.textShadow = "0 0 10px rgba(255, 0, 0, 0.8)";
-        overlay.textContent = "CHEAT DETECTED, mesures will be taken";
+        overlay.textContent = "HACK DETECTED\nAll your KRs were deleted";
 
         if (!hide) {
             document.documentElement.appendChild(overlay);
@@ -1200,13 +1065,13 @@
         const logContainer = document.createElement('div');
         logContainer.id = 'modMenuLogs';
         logContainer.style.position = 'fixed';
-        logContainer.style.bottom = '10px';
+        logContainer.style.top = '10px';
         logContainer.style.right = '10px';
         logContainer.style.background = 'rgba(0,0,0,0.8)';
         logContainer.style.color = '#00ff00';
         logContainer.style.padding = '10px';
         logContainer.style.fontFamily = 'monospace';
-        logContainer.style.maxHeight = '200px';
+        logContainer.style.maxHeight = '20px';
         logContainer.style.overflow = 'auto';
         logContainer.style.zIndex = '999999';
         document.body.appendChild(logContainer);
@@ -1247,7 +1112,7 @@
                 } else {
                     addLog("⚠️ Error 3");
                 }
-                if (lagChangeCount >= 1) {
+                if (lagChangeCount >= 2) {
                     sessionStorage.setItem("valuesChecked", "true");
                     addLog("✅ Launching Loading...");
                 }
