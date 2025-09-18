@@ -1,19 +1,19 @@
+// ==UserScript==
+// @name         Krunker 2025 TO FIX
+// @version      1.A
+// @description  Includes silent aimbot, ESP, wireframe players, FOV, recoil bypass, wallhack (BETA). Toggle with [O]. Use at your own risk.
+// @author       UKNOWN
+// @license      All Rights Reserved
+// @match        *://krunker.io/*
+// @match        *://browserfps.com/*
+// @run-at       document-start
+// @require      https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.min.js
+// @grant        GM_setValue
+// @grant        GM_getValue
+// ==/UserScript==
+
 (function() {
     'use strict';
-
-    // ==UserScript==
-    // @name         Krunker 2025 TO FIX
-    // @version      1.A
-    // @description  Includes silent aimbot, ESP, wireframe players, FOV, recoil bypass, wallhack (BETA). Toggle with [O]. Use at your own risk.
-    // @author       UKNOWN
-    // @license      All Rights Reserved
-    // @match        *://krunker.io/*
-    // @match        *://browserfps.com/*
-    // @run-at       document-start
-    // @require      https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.min.js
-    // @grant        GM_setValue
-    // @grant        GM_getValue
-    // ==/UserScript==
 
     const visualizationPalette = [
         { name: "Crimson", value: "0.86, 0.08, 0.24", style: "color: #dc143c" },
@@ -283,37 +283,37 @@
                     display: flex;
                     flex-direction: column;
                     font-family: 'Tahoma', sans-serif;
-                    font-size: 13px;
+                    font-size: 20px;
                     color: #e0e0e0;
-                    width: 260px;
+                    width: 390px;
                     user-select: none;
-                    border: 1px solid #1a3a5a;
-                    background: rgba(15, 15, 30, 0.9);
-                    box-shadow: 0 0 15px rgba(0, 0, 0, 0.7);
+                    border: 1px solid #ffffff;
+                    background: rgba(0, 0, 0, 0.9);
+                    box-shadow: 0 0 15px rgba(0, 0, 0, 0.8);
                     border-radius: 5px;
                     overflow: hidden;
                 }
 
                 .interface-header {
-                    padding: 8px 12px;
-                    background: linear-gradient(to right, #0a1a2f, #142a45);
+                    padding: 12px 18px;
+                    background: linear-gradient(to right, #0a0a0a, #1e1e1e);
                     cursor: move;
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
-                    border-bottom: 1px solid #1a3a5a;
+                    border-bottom: 1px solid #ffffff;
                 }
 
                 .interface-title {
-                    font-size: 14px;
+                    font-size: 21px;
                     font-weight: bold;
-                    color: #4fc3f7;
-                    text-shadow: 0 0 5px rgba(79, 195, 247, 0.5);
+                    color: #ffffff;
+                    text-shadow: 0 0 5px rgba(242, 242, 242, 0.5);
                 }
 
                 .interface-status {
-                    font-size: 12px;
-                    color: #64b5f6;
+                    font-size: 18px;
+                    color: #ffffff;
                 }
 
                 .interface-content {
@@ -327,15 +327,15 @@
 
                 .panel {
                     margin: 5px;
-                    border: 1px solid #1a3a5a;
-                    background: rgba(15, 25, 40, 0.7);
+                    border: 1px solid #ffffff;
+                    background: rgba(20, 20, 20, 0.85);
                     border-radius: 3px;
                     overflow: hidden;
                 }
 
                 .panel-header {
-                    padding: 7px 12px;
-                    background: linear-gradient(to right, #0a1a2f, #142a45);
+                    padding: 11px 18px;
+                    background: linear-gradient(to right, #0a0a0a, #1e1e1e);
                     cursor: pointer;
                     display: flex;
                     justify-content: space-between;
@@ -343,17 +343,17 @@
                 }
 
                 .panel-header:hover {
-                    background: linear-gradient(to right, #0c2038, #183252);
+                    background: linear-gradient(to right, #151515, #2a2a2a);
                 }
 
                 .panel-title {
                     font-weight: bold;
-                    color: #4fc3f7;
+                    color:rgb(255, 255, 255);
                 }
 
                 .panel-arrow {
                     transition: transform 0.2s;
-                    color: #64b5f6;
+                    color:rgb(167, 167, 167);
                 }
 
                 .panel.active .panel-arrow {
@@ -370,11 +370,11 @@
                 }
 
                 .control-item {
-                    padding: 7px 12px;
+                    padding: 11px 18px;
                     display: flex;
                     flex-direction: column;
-                    background: rgba(20, 30, 45, 0.7);
-                    border-bottom: 1px solid #1a3a5a;
+                    background: rgba(34, 34, 34, 0.85);
+                    border-bottom: 1px solid #ffffff;
                 }
 
                 .control-item:last-child {
@@ -385,80 +385,80 @@
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
-                    margin-bottom: 5px;
+                    margin-bottom: 8px;
                 }
 
                 .control-name {
                     font-weight: bold;
-                    color: #bbdefb;
+                    color:rgb(192, 192, 192);
                 }
 
                 .value-display {
-                    font-size: 12px;
+                    font-size: 18px;
                     font-weight: bold;
                 }
 
                 .control-inputs {
                     display: flex;
                     flex-direction: column;
-                    gap: 5px;
+                    gap: 8px;
                 }
 
                 .slider-container {
                     display: flex;
                     align-items: center;
-                    gap: 8px;
+                    gap: 12px;
                 }
 
                 .slider-container input[type="range"] {
                     flex-grow: 1;
                     -webkit-appearance: none;
-                    height: 4px;
-                    background: #0c2038;
+                    height: 6px;
+                    background: #222222;
                     outline: none;
-                    border-radius: 2px;
+                    border-radius: 3px;
                 }
 
                 .slider-container input[type="range"]::-webkit-slider-thumb {
                     -webkit-appearance: none;
                     appearance: none;
-                    width: 12px;
-                    height: 12px;
-                    background: #4fc3f7;
+                    width: 18px;
+                    height: 18px;
+                    background:rgb(255, 255, 255);
                     cursor: pointer;
                     border-radius: 50%;
                 }
 
                 .slider-container input[type="number"] {
-                    width: 50px;
+                    width: 75px;
                     text-align: center;
-                    background: #0c2038;
-                    border: 1px solid #1a3a5a;
+                    background: #111111;
+                    border: 1px solid #ffffff;
                     color: #fff;
-                    padding: 2px;
-                    font-size: 12px;
-                    border-radius: 2px;
+                    padding: 3px;
+                    font-size: 18px;
+                    border-radius: 3px;
                 }
 
                 .action-button {
-                    padding: 7px 12px;
-                    background: #142a45;
+                    padding: 11px 18px;
+                    background: #1e1e1e;
                     text-align: center;
                     cursor: pointer;
-                    border: 1px solid #1a3a5a;
+                    border: 1px solid #ffffff;
                     margin: 5px;
-                    color: #4fc3f7;
-                    border-radius: 3px;
+                    color:rgb(255, 255, 255);
+                    border-radius: 4px;
                     transition: background 0.2s;
                 }
 
                 .action-button:hover {
-                    background: #1c3c5e;
+                    background: #2a2a2a;
                 }
             </style>
             <div class="nexus-interface ${config.uiCollapsed ? '' : 'expanded'}">
                 <div class="interface-header">
-                    <span class="interface-title">NexusCore Pro</span>
+                    <span class="interface-title">Cheat Settings</span>
                     <span class="interface-status">[${config.uiCollapsed ? '+' : '-'}]</span>
                 </div>
                 <div class="interface-content">
@@ -468,14 +468,6 @@
                             <span class="panel-arrow">▶</span>
                         </div>
                         <div class="panel-content">
-
-                            <div class="control-item" data-config-key="targetingMode">
-                                <div class="control-label">
-                                    <span class="control-name">${featureDescriptions.targetingMode}</span>
-                                    <span class="value-display" style="color: #4fc3f7">Crosshair</span>
-                                </div>
-                            </div>
-
                             <div class="control-item">
                                 <div class="control-label">
                                     <span class="control-name">${featureDescriptions.verticalAdjustment}</span>
