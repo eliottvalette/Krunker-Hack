@@ -644,7 +644,10 @@
 
         let positionCounter = 0;
         let currentTarget;
-        let minimumDistance = Infinity;
+        let minimumDistance15 = Infinity;
+        let minimumDistance135 = Infinity;
+        let target15 = null;
+        let target135 = null;
 
         tempTransform.matrix.copy(localPlayer.matrix).invert();
 
@@ -714,11 +717,24 @@
                 .normalize();
             const angle = Math.acos(playerForward.dot(toTarget)) * (180 / Math.PI);
 
-            // Target closest player within 15° cone
-            if (!targetLockActive && angle < 15 && distance < minimumDistance) {
-                currentTarget = entity;
-                minimumDistance = distance;
+            // Target closest player within 15° cone first
+            if (!targetLockActive && angle < 15 && distance < minimumDistance15) {
+                target15 = entity;
+                minimumDistance15 = distance;
             }
+            
+            // If no target in 15°, look for closest in 135° cone
+            if (!targetLockActive && angle < 135 && distance < minimumDistance135) {
+                target135 = entity;
+                minimumDistance135 = distance;
+            }
+        }
+
+        // Prioritize 15° cone target, fallback to 135° cone
+        if (target15) {
+            currentTarget = target15;
+        } else if (target135) {
+            currentTarget = target135;
         }
 
         for (let i = 0; i < playerEntities.length; i++) {
