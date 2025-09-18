@@ -65,6 +65,22 @@
     const respawnTimestamps = {};
     const previousDead      = {};
 
+    const defaultConfig = {
+        targetingEnabled: true,
+        predictionIntensity: 1.0,
+        verticalAdjustment: 0.92, // Ajustement vertical par défaut
+        smoothTargeting: true,
+        smoothingFactor: 0.3,    // Facteur de lissage (0-1)
+        targetingMode: 'hybrid',  // 'ray', 'distance', 'hybrid'
+        fovLimit: 90,            // Limite du FOV en degrés
+        respawnColorDuration: 2000 // Durée de la couleur rouge après respawn
+    };
+
+    let config = { ...defaultConfig };
+    let targetPositionHistory = {};
+    let lastTargetingTime = 0;
+    let smoothingVelocity = new THREE.Vector3();
+
     Object.defineProperty(Object.prototype, 'gameState', {
         set(state) {
             window._debugWorld = state;
@@ -89,45 +105,125 @@
                         const dirY     = player.rotation.y;
                         const direction = { x: Math.sin(dirY), z: Math.cos(dirY) };
 
+                        // Calcul des positions actuelles pour la prédiction
+                        const currentPositions = {};
                         Object.values(serverPlayers).forEach(enemy => {
-                            if (enemy?.model?.position && enemy.isEnemy && !enemy.dead) {
-                                const ex = enemy.model.position.x;
-                                const ez = enemy.model.position.z;
-                                const vx = ex - origin.x;
-                                const vz = ez - origin.z;
+                            if (enemy?.model?.position) {
+                                currentPositions[enemy.id] = enemy.model.position.clone();
+                            }
+                        });
+
+                        // Filtrer d'abord les ennemis valides
+                        const validEnemies = Object.values(serverPlayers).filter(enemy => {
+                            if (!enemy?.model?.position || !enemy.isEnemy || enemy.dead) return false;
+                            
+                            const vx = enemy.model.position.x - origin.x;
+                            const vz = enemy.model.position.z - origin.z;
+                            
+                            // Vérification du FOV
+                            const angleToTarget = Math.atan2(vx, vz) - dirY;
+                            const angleDegrees = Math.abs(angleToTarget * (180 / Math.PI));
+                            return angleDegrees <= config.fovLimit;
+                        });
+
+                        // Trouver la cible la plus proche parmi les ennemis valides
+                        validEnemies.forEach(enemy => {
+                            const ex = enemy.model.position.x;
+                            const ez = enemy.model.position.z;
+                            const vx = ex - origin.x;
+                            const vz = ez - origin.z;
+
+                            // Prédiction de mouvement
+                            let predictedPosition = enemy.model.position.clone();
+                            if (targetPositionHistory[enemy.id]) {
+                                const velocity = new THREE.Vector3().subVectors(
+                                    currentPositions[enemy.id],
+                                    targetPositionHistory[enemy.id]
+                                );
+                                predictedPosition.add(velocity.multiplyScalar(config.predictionIntensity));
+                            }
+
+                            // Calcul de la distance selon le mode de ciblage
+                            let distance = Infinity;
+                            if (config.targetingMode === 'ray' || config.targetingMode === 'hybrid') {
                                 const dot = vx*direction.x + vz*direction.z;
                                 const projX = dot*direction.x, projZ = dot*direction.z;
                                 const perpX = vx - projX, perpZ = vz - projZ;
-                                const d2 = Math.hypot(perpX, perpZ);
-                                if (d2 < minDistRay) {
-                                    minDistRay   = d2;
-                                    closestEnemy = enemy;
+                                distance = Math.hypot(perpX, perpZ);
+                            }
+                            
+                            if (config.targetingMode === 'distance' || config.targetingMode === 'hybrid') {
+                                const physicalDist = Math.hypot(vx, vz);
+                                if (config.targetingMode === 'hybrid') {
+                                    // En mode hybride, on combine les deux distances
+                                    distance = Math.min(distance, physicalDist * 0.5);
+                                } else {
+                                    distance = physicalDist;
                                 }
+                            }
+
+                            if (distance < minDistRay) {
+                                minDistRay = distance;
+                                closestEnemy = enemy;
+                                closestEnemy.predictedPosition = predictedPosition;
                             }
                         });
 
                         if ((isRightClickHeld || player.weapon?.scoping) && closestEnemy) {
-                            const dx = closestEnemy.model.position.x - origin.x;
-                            const dz = closestEnemy.model.position.z - origin.z;
-
-                            // ✅ CORRECTION ici :
-                            const dy = ((closestEnemy.model.position.y + (closestEnemy.crouching ? 0.55 : 0.92))
+                            const targetPos = closestEnemy.predictedPosition || closestEnemy.model.position;
+                            const dx = targetPos.x - origin.x;
+                            const dz = targetPos.z - origin.z;
+                            const dy = ((targetPos.y + (closestEnemy.crouching ? 0.55 : config.verticalAdjustment))
                                       - (player.position.y + (player.inputs?.crouch ? 0.15 : 0.0)));
 
-                            const rotY  = Math.atan2(dx, dz);
+                            const rotY = Math.atan2(dx, dz);
                             const hDist = Math.hypot(dx, dz);
-                            let   rotX  = Math.atan2(dy, hDist);
+                            let rotX = Math.atan2(dy, hDist);
                             rotX = Math.max(Math.min(rotX, Math.PI/2), -Math.PI/2);
 
-                            player.rotation.y = (rotY + Math.PI) % (2 * Math.PI);
-                            player.rotation.x = rotX;
+                            // Application du lissage si activé
+                            if (config.smoothTargeting) {
+                                const currentTime = performance.now();
+                                const deltaTime = Math.min(50, currentTime - lastTargetingTime) / 1000;
+                                lastTargetingTime = currentTime;
 
+                                const targetRotation = new THREE.Quaternion();
+                                targetRotation.setFromEuler(new THREE.Euler(rotX, rotY + Math.PI, 0, 'YXZ'));
+
+                                const currentRotation = new THREE.Quaternion();
+                                currentRotation.setFromEuler(new THREE.Euler(
+                                    player.rotation.x,
+                                    player.rotation.y,
+                                    0,
+                                    'YXZ'
+                                ));
+
+                                const smoothedRotation = new THREE.Quaternion();
+                                THREE.Quaternion.slerp(
+                                    currentRotation,
+                                    targetRotation,
+                                    smoothedRotation,
+                                    Math.min(1, config.smoothingFactor / deltaTime)
+                                );
+
+                                const euler = new THREE.Euler().setFromQuaternion(smoothedRotation, 'YXZ');
+                                player.rotation.x = euler.x;
+                                player.rotation.y = euler.y;
+                            } else {
+                                player.rotation.y = (rotY + Math.PI) % (2 * Math.PI);
+                                player.rotation.x = rotX;
+                            }
+
+                            // Mouvement vers la cible si trop éloigné
                             if (hDist > 1) {
                                 const s = 0.1;
                                 player.position.x += dx/hDist * s;
                                 player.position.z += dz/hDist * s;
                             }
                         }
+
+                        // Mise à jour de l'historique des positions
+                        targetPositionHistory = currentPositions;
 
                         Object.values(serverPlayers).forEach(enemy => {
                             if (!enemy.model || !enemy.isEnemy) return;

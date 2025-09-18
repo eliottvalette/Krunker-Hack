@@ -2,7 +2,7 @@
     'use strict';
 
     // ==UserScript==
-    // @name         Krunker 2025 Working WallHack and Aimbot
+    // @name         Krunker 2025 TO FIX
     // @version      1.A
     // @description  Includes silent aimbot, ESP, wireframe players, FOV, recoil bypass, wallhack (BETA). Toggle with [O]. Use at your own risk.
     // @author       UKNOWN
@@ -27,17 +27,12 @@
     ];
 
     const defaultConfig = {
-        targetingEnabled: true,
-        visualizationEnabled: true,
-        trajectoryLines: true,
         visualizationColor: "0.86, 0.08, 0.24",
         visualizationColorIndex: 0,
         verticalAdjustment: 9.5,
-        targetingMode: 'hybrid',
+        targetingMode: 'crosshairProximity',
         predictionIntensity: 1.0,
         targetingPrecision: 100,
-        smoothTargeting: false,
-        smoothingFactor: 100,
         uiCollapsed: false,
         lastActivePanel: null
     };
@@ -45,21 +40,13 @@
     const config = GM_getValue('krunkerEnhancerConfig', defaultConfig);
 
     const keyBindings = {
-        KeyB: 'targetingEnabled',
-        KeyN: 'visualizationEnabled',
-        KeyM: 'trajectoryLines',
         KeyC: 'cycleVisualizationColor',
         Digit2: 'toggleTargetingMode',
-        Digit3: 'smoothTargeting',
         Backslash: 'toggleUI'
     };
 
     const featureDescriptions = {
-        targetingEnabled: "Targeting System [B]",
-        visualizationEnabled: "Visualization [N]",
-        trajectoryLines: "Trajectory Lines [M]",
         targetingMode: "Targeting Mode [2]",
-        smoothTargeting: "Smooth Targeting [3]",
         visualizationColor: "Color Scheme [C]"
     };
 
@@ -103,7 +90,6 @@
     };
 
     const vectorCache1 = new ThreeDEngine.Vector3();
-    const vectorCache2 = new ThreeDEngine.Vector3();
     const tempTransform = new ThreeDEngine.Object3D();
     tempTransform.rotation.order = 'YXZ';
 
@@ -194,18 +180,12 @@
         saveConfiguration();
     }
 
-    function restoreDefaultConfiguration() {
-        Object.assign(config, defaultConfig);
-        saveConfiguration();
-        updateInterfaceConfiguration();
-    }
-
     function handlePointerDown(e) {
         if (e.button === 2) {
             rightMouseActive = true;
             targetLockActive = false;
             lockedTarget = null;
-            
+
             if (originalMouseMove) {
                 document.removeEventListener('mousemove', blockMouseMovement, true);
             }
@@ -217,7 +197,7 @@
             rightMouseActive = false;
             targetLockActive = false;
             lockedTarget = null;
-            
+
             if (originalMouseMove) {
                 document.removeEventListener('mousemove', blockMouseMovement, true);
             }
@@ -225,7 +205,7 @@
     }
 
     function blockMouseMovement(e) {
-        if (targetLockActive && lockedTarget && config.targetingEnabled) {
+        if (targetLockActive && lockedTarget) {
             e.stopPropagation();
             e.preventDefault();
             return false;
@@ -236,36 +216,14 @@
         GM_setValue('krunkerEnhancerConfig', config);
     }
 
-    function toggleConfiguration(key) {
-        config[key] = !config[key];
-        const itemElement = document.querySelector(`[data-config-key="${key}"]`);
-        if (itemElement) {
-            const valueElement = itemElement.querySelector('.value-display');
-            valueElement.textContent = config[key] ? 'ON' : 'OFF';
-            valueElement.style.color = config[key] ? '#4fc3f7' : '#F44336';
-        }
-        saveConfiguration();
-    }
+    function toggleConfiguration(key) {}
 
     function switchTargetingMode() {
-        if (config.targetingMode === 'crosshairProximity') {
-            config.targetingMode = 'distanceProximity';
-        } else if (config.targetingMode === 'distanceProximity') {
-            config.targetingMode = 'hybrid';
-        } else {
-            config.targetingMode = 'crosshairProximity';
-        }
-        
+        config.targetingMode = 'crosshairProximity';
         const modeElement = document.querySelector('[data-config-key="targetingMode"]');
         if (modeElement) {
             const valueElement = modeElement.querySelector('.value-display');
-            if (config.targetingMode === 'crosshairProximity') {
-                valueElement.textContent = 'Crosshair';
-            } else if (config.targetingMode === 'distanceProximity') {
-                valueElement.textContent = 'Distance';
-            } else {
-                valueElement.textContent = 'Hybrid';
-            }
+            valueElement.textContent = 'Crosshair';
             valueElement.style.color = '#4fc3f7';
         }
         saveConfiguration();
@@ -275,60 +233,6 @@
         config.uiCollapsed = !config.uiCollapsed;
         updateInterfaceVisibility();
         saveConfiguration();
-    }
-
-    function updateVerticalAdjustmentDisplay() {
-        const adjustmentInput = document.querySelector('#verticalAdjustmentInput');
-        const adjustmentSlider = document.querySelector('#verticalAdjustmentSlider');
-        if (adjustmentInput && adjustmentSlider) {
-            adjustmentInput.value = config.verticalAdjustment;
-            adjustmentSlider.value = config.verticalAdjustment;
-        }
-    }
-
-    function updateInterfaceConfiguration() {
-        Object.keys(config).forEach(key => {
-            const itemElement = document.querySelector(`[data-config-key="${key}"]`);
-            if (itemElement) {
-                const valueElement = itemElement.querySelector('.value-display');
-                if (valueElement) {
-                    if (key === 'targetingMode') {
-                        if (config[key] === 'crosshairProximity') {
-                            valueElement.textContent = 'Crosshair';
-                        } else if (config[key] === 'distanceProximity') {
-                            valueElement.textContent = 'Distance';
-                        } else {
-                            valueElement.textContent = 'Hybrid';
-                        }
-                        valueElement.style.color = '#4fc3f7';
-                    } else if (key === 'visualizationColor') {
-                        valueElement.textContent = visualizationPalette[config.visualizationColorIndex].name;
-                        valueElement.style = visualizationPalette[config.visualizationColorIndex].style;
-                    } else if (typeof config[key] === 'boolean') {
-                        valueElement.textContent = config[key] ? 'ON' : 'OFF';
-                        valueElement.style.color = config[key] ? '#4fc3f7' : '#F44336';
-                    }
-                }
-            }
-        });
-
-        const interfaceElement = document.querySelector('.nexus-interface');
-        if (interfaceElement) {
-            if (config.uiCollapsed) {
-                interfaceElement.classList.remove('expanded');
-            } else {
-                interfaceElement.classList.add('expanded');
-            }
-        }
-
-        if (config.lastActivePanel) {
-            const panelElement = document.querySelector(
-                `.panel-header:contains("${config.lastActivePanel}")`
-            );
-            if (panelElement) {
-                panelElement.parentElement.classList.add('active');
-            }
-        }
     }
 
     function updateInterfaceVisibility() {
@@ -541,26 +445,15 @@
                             <span class="panel-arrow">▶</span>
                         </div>
                         <div class="panel-content">
-                            <div class="control-item" data-config-key="targetingEnabled">
-                                <div class="control-label">
-                                    <span class="control-name">${featureDescriptions.targetingEnabled}</span>
-                                    <span class="value-display" style="color: ${config.targetingEnabled ? '#4fc3f7' : '#f44336'}">${config.targetingEnabled ? 'ON' : 'OFF'}</span>
-                                </div>
-                            </div>
 
                             <div class="control-item" data-config-key="targetingMode">
                                 <div class="control-label">
                                     <span class="control-name">${featureDescriptions.targetingMode}</span>
-                                    <span class="value-display" style="color: #4fc3f7">${config.targetingMode === 'crosshairProximity' ? 'Crosshair' : config.targetingMode === 'distanceProximity' ? 'Distance' : 'Hybrid'}</span>
+                                    <span class="value-display" style="color: #4fc3f7">Crosshair</span>
                                 </div>
                             </div>
 
-                            <div class="control-item" data-config-key="smoothTargeting">
-                                <div class="control-label">
-                                    <span class="control-name">${featureDescriptions.smoothTargeting}</span>
-                                    <span class="value-display" style="color: ${config.smoothTargeting ? '#4fc3f7' : '#f44336'}">${config.smoothTargeting ? 'ON' : 'OFF'}</span>
-                                </div>
-                            </div>
+                            
                         </div>
                     </div>
 
@@ -570,19 +463,6 @@
                             <span class="panel-arrow">▶</span>
                         </div>
                         <div class="panel-content">
-                            <div class="control-item" data-config-key="visualizationEnabled">
-                                <div class="control-label">
-                                    <span class="control-name">${featureDescriptions.visualizationEnabled}</span>
-                                    <span class="value-display" style="color: ${config.visualizationEnabled ? '#4fc3f7' : '#f44336'}">${config.visualizationEnabled ? 'ON' : 'OFF'}</span>
-                                </div>
-                            </div>
-
-                            <div class="control-item" data-config-key="trajectoryLines">
-                                <div class="control-label">
-                                    <span class="control-name">${featureDescriptions.trajectoryLines}</span>
-                                    <span class="value-display" style="color: ${config.trajectoryLines ? '#4fc3f7' : '#f44336'}">${config.trajectoryLines ? 'ON' : 'OFF'}</span>
-                                </div>
-                            </div>
 
                             <div class="control-item" data-config-key="visualizationColor">
                                 <div class="control-label">
@@ -590,27 +470,6 @@
                                     <span class="value-display" style="${visualizationPalette[config.visualizationColorIndex].style}">${visualizationPalette[config.visualizationColorIndex].name}</span>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-
-                    <div class="panel ${config.lastActivePanel === 'Configuration' ? 'active' : ''}">
-                        <div class="panel-header">
-                            <span class="panel-title">Paramètres</span>
-                            <span class="panel-arrow">▶</span>
-                        </div>
-                        <div class="panel-content">
-                        </div>
-                    </div>
-
-                    <div class="panel">
-                        <div class="panel-header">
-                            <span class="panel-title">Système</span>
-                            <span class="panel-arrow">▶</span>
-                        </div>
-                        <div class="panel-content">
-                        <div class="action-button" id="resetSettings">
-                        Réinitialiser Tous les Paramètres
-                        </div>
                         </div>
                     </div>
                 </div>
@@ -637,11 +496,6 @@
                 }
             });
         });
-
-        const resetButton = interfaceContainer.querySelector('#resetSettings');
-        if (resetButton) {
-            resetButton.addEventListener('click', restoreDefaultConfiguration);
-        }
 
         const interfaceHeader = interfaceContainer.querySelector('.interface-header');
         let isDragging = false;
@@ -773,6 +627,9 @@
                 continue;
             }
 
+            // Ensure entity is visible so its visualization box can render
+            entity.visible = true;
+
             trajectoryPositions.setXYZ(positionCounter++, 0, 10, -5);
             vectorCache1.copy(entity.position);
             vectorCache1.y += 9;
@@ -793,13 +650,7 @@
                 predictedPosition.add(velocity.multiplyScalar(config.predictionIntensity));
             }
 
-            // Calculate physical distance to this entity
-            const dx = predictedPosition.x - localPlayer.position.x;
-            const dy = predictedPosition.y - localPlayer.position.y;
-            const dz = predictedPosition.z - localPlayer.position.z;
-            const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
-            
-            // Calculate screen distance (crosshair proximity)
+            // Calculate screen distance (crosshair proximity only)
             vectorCache1.copy(predictedPosition);
             vectorCache1.y += config.verticalAdjustment;
             const viewCamera = localPlayer.children[0].children[0];
@@ -807,7 +658,7 @@
             const screenX = vectorCache1.x;
             const screenY = vectorCache1.y;
             const screenDistance = Math.sqrt(screenX * screenX + screenY * screenY);
-            
+
             // Calculate angle to target
             const playerForward = new ThreeDEngine.Vector3(0, 0, -1)
                 .applyQuaternion(localPlayer.quaternion);
@@ -816,77 +667,40 @@
                 .normalize();
             const angle = Math.acos(playerForward.dot(toTarget)) * (180 / Math.PI);
 
-            if (config.targetingMode === 'distanceProximity') {
-                if (distance < minimumDistance && !targetLockActive && angle < 90) {
-                    currentTarget = entity;
-                    minimumDistance = distance;
-                }
-            } else if (config.targetingMode === 'crosshairProximity') {
-                if (screenDistance < minimumDistance && !targetLockActive && angle < 90) {
-                    currentTarget = entity;
-                    minimumDistance = screenDistance;
-                }
-            } else if (config.targetingMode === 'hybrid') {
-                // Hybrid mode: if any player is very close (within 20 units), target by distance
-                // Otherwise, among players who are within a reasonable screen distance, pick the closest one
-                const veryCloseDistance = 50; // Adjust this threshold as needed
-                const reasonableScreenDistance = 0.3; // Adjust this threshold as needed
-                
-                if (!targetLockActive && angle < 90) {
-                    // If we find a very close player, immediately target them
-                    if (distance < veryCloseDistance && distance < minimumDistance) {
-                        currentTarget = entity;
-                        minimumDistance = distance;
-                    } 
-                    // Otherwise, consider players within reasonable screen distance
-                    else if (screenDistance < reasonableScreenDistance) {
-                        // For players on screen, pick the physically closest one
-                        if (currentTarget === undefined || 
-                            // If current target is not in reasonable screen distance, or this entity is closer
-                            (!currentTarget.screenDistanceValue || currentTarget.screenDistanceValue > reasonableScreenDistance) ||
-                            (currentTarget.physicalDistanceValue && distance < currentTarget.physicalDistanceValue)) {
-                            currentTarget = entity;
-                            // Store the distance values for comparison with other entities
-                            entity.physicalDistanceValue = distance;
-                            entity.screenDistanceValue = screenDistance;
-                        }
-                    }
-                }
+            if (screenDistance < minimumDistance && !targetLockActive && angle < 90) {
+                currentTarget = entity;
+                minimumDistance = screenDistance;
             }
         }
 
         for (let i = 0; i < playerEntities.length; i++) {
                 const entity = playerEntities[i];
-                entity.visible = config.visualizationEnabled || entity.visible;
-                if (config.visualizationEnabled) {
-                    entity.visualizationBox.material = (entity === currentTarget)
-                        ? greenBoxMaterial
-                    : visualizationMaterial;
-                    entity.visualizationBox.visible = true;
-                } else {
-                    entity.visualizationBox.visible = false;
-                }
+                // Keep visualization boxes always drawn on top by reassigning material (guards against lost refs)
+                entity.visualizationBox.material = (entity === currentTarget)
+                    ? greenBoxMaterial
+                : visualizationMaterial;
+                entity.visualizationBox.visible = true;
             }
 
         targetPositionHistory = currentPositions;
 
         trajectoryPositions.needsUpdate = true;
         trajectoryVisual.geometry.setDrawRange(0, positionCounter);
-        trajectoryVisual.visible = config.trajectoryLines;
+        trajectoryVisual.visible = true;
 
-        if (!rightMouseActive || !config.targetingEnabled) return;
+        if (!rightMouseActive) return;
 
         if (!targetLockActive) {
             lockedTarget = currentTarget;
             targetLockActive = true;
-            
+
             document.addEventListener('mousemove', blockMouseMovement, true);
         }
 
         if (lockedTarget && !sceneContext.children.includes(lockedTarget)) {
             targetLockActive = false;
             lockedTarget = null;
-            
+
             document.removeEventListener('mousemove', blockMouseMovement, true);
             return;
         }
@@ -917,7 +731,7 @@
 
             const targetRotation = new ThreeDEngine.Quaternion();
             targetRotation.setFromUnitVectors(new ThreeDEngine.Vector3(0, 0, -1), direction);
-            
+
             localPlayer.quaternion.copy(targetRotation);
         } else {
             let predictedPosition = lockedTarget.position.clone();
@@ -953,7 +767,7 @@
         rightMouseActive = false;
         targetLockActive = false;
         lockedTarget = null;
-        
+
         if (originalMouseMove) {
             document.removeEventListener('mousemove', blockMouseMovement, true);
         }
@@ -978,8 +792,6 @@
                 toggleInterface();
             } else if (event.code === 'KeyC') {
                 updateVisualizationColor();
-            } else if (event.code === 'Digit3') {
-                toggleConfiguration('smoothTargeting');
             } else {
                 toggleConfiguration(keyBindings[event.code]);
             }
