@@ -42,12 +42,15 @@
     const keyBindings = {
         KeyC: 'cycleVisualizationColor',
         Digit2: 'toggleTargetingMode',
+        BracketLeft: 'decreaseVerticalAdjustment',
+        BracketRight: 'increaseVerticalAdjustment',
         Backslash: 'toggleUI'
     };
 
     const featureDescriptions = {
         targetingMode: "Targeting Mode [2]",
-        visualizationColor: "Color Scheme [C]"
+        visualizationColor: "Color Scheme [C]",
+        verticalAdjustment: "Vertical Adjustment"
     };
 
     let sceneContext;
@@ -111,7 +114,10 @@
             void main() {
                 gl_FragColor = vec4(${config.visualizationColor}, 1.0);
             }
-        `
+        `,
+        depthTest: false,
+        depthWrite: false,
+        transparent: false
     });
 
     const greenBoxMaterial = new ThreeDEngine.RawShaderMaterial({
@@ -120,7 +126,10 @@
         void main() {
             gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0);
         }
-    `
+    `,
+        depthTest: false,
+        depthWrite: false,
+        transparent: false
     });
 
 
@@ -129,6 +138,7 @@
         visualizationMaterial
     );
     trajectoryVisual.frustumCulled = false;
+    trajectoryVisual.renderOrder = 1;
     const trajectoryPositions = new ThreeDEngine.BufferAttribute(
         new Float32Array(100 * 2 * 3),
         3
@@ -155,10 +165,14 @@
                 void main() {
                     gl_FragColor = vec4(${config.visualizationColor}, 1.0);
                 }
-            `
+            `,
+            depthTest: false,
+            depthWrite: false,
+            transparent: false
         });
 
         trajectoryVisual.material = visualizationMaterial;
+        trajectoryVisual.renderOrder = 1;
 
         if (sceneContext && sceneContext.children) {
             for (let i = 0; i < sceneContext.children.length; i++) {
@@ -233,6 +247,15 @@
         config.uiCollapsed = !config.uiCollapsed;
         updateInterfaceVisibility();
         saveConfiguration();
+    }
+
+    function updateVerticalAdjustmentDisplay() {
+        const adjustmentInput = document.querySelector('#verticalAdjustmentInput');
+        const adjustmentSlider = document.querySelector('#verticalAdjustmentSlider');
+        if (adjustmentInput && adjustmentSlider) {
+            adjustmentInput.value = config.verticalAdjustment;
+            adjustmentSlider.value = config.verticalAdjustment;
+        }
     }
 
     function updateInterfaceVisibility() {
@@ -453,6 +476,17 @@
                                 </div>
                             </div>
 
+                            <div class="control-item">
+                                <div class="control-label">
+                                    <span class="control-name">${featureDescriptions.verticalAdjustment}</span>
+                                </div>
+                                <div class="control-inputs">
+                                    <div class="slider-container">
+                                        <input type="range" id="verticalAdjustmentSlider" min="-50" max="50" step="0.25" value="${config.verticalAdjustment}">
+                                        <input type="number" id="verticalAdjustmentInput" value="${config.verticalAdjustment}" min="-50" max="50" step="0.25">
+                                    </div>
+                                </div>
+                            </div>
                             
                         </div>
                     </div>
@@ -496,6 +530,29 @@
                 }
             });
         });
+
+        const verticalAdjustmentSlider = interfaceContainer.querySelector('#verticalAdjustmentSlider');
+        const verticalAdjustmentInput = interfaceContainer.querySelector('#verticalAdjustmentInput');
+        if (verticalAdjustmentSlider && verticalAdjustmentInput) {
+            verticalAdjustmentSlider.addEventListener('input', function() {
+                config.verticalAdjustment = parseFloat(this.value);
+                verticalAdjustmentInput.value = config.verticalAdjustment;
+                saveConfiguration();
+            });
+
+            verticalAdjustmentInput.addEventListener('change', function() {
+                const value = parseFloat(this.value);
+                if (!isNaN(value)) {
+                    const clampedValue = Math.max(-50, Math.min(50, value));
+                    config.verticalAdjustment = clampedValue;
+                    verticalAdjustmentSlider.value = clampedValue;
+                    this.value = clampedValue;
+                    saveConfiguration();
+                } else {
+                    this.value = config.verticalAdjustment;
+                }
+            });
+        }
 
         const interfaceHeader = interfaceContainer.querySelector('.interface-header');
         let isDragging = false;
@@ -614,6 +671,7 @@
                     visualizationMaterial
                 );
                 visualizationBox.frustumCulled = false;
+                visualizationBox.renderOrder = 9999;
                 entity.add(visualizationBox);
                 entity.visualizationBox = visualizationBox;
             }
@@ -626,9 +684,6 @@
                 }
                 continue;
             }
-
-            // Ensure entity is visible so its visualization box can render
-            entity.visible = true;
 
             trajectoryPositions.setXYZ(positionCounter++, 0, 10, -5);
             vectorCache1.copy(entity.position);
@@ -650,16 +705,16 @@
                 predictedPosition.add(velocity.multiplyScalar(config.predictionIntensity));
             }
 
-            // Calculate screen distance (crosshair proximity only)
-            vectorCache1.copy(predictedPosition);
-            vectorCache1.y += config.verticalAdjustment;
-            const viewCamera = localPlayer.children[0].children[0];
-            vectorCache1.project(viewCamera);
-            const screenX = vectorCache1.x;
-            const screenY = vectorCache1.y;
-            const screenDistance = Math.sqrt(screenX * screenX + screenY * screenY);
+            // Ensure entity is visible so its visualization box can render
+            entity.visible = true;
 
-            // Calculate angle to target
+            // Calculate physical distance to this entity
+            const dx = predictedPosition.x - localPlayer.position.x;
+            const dy = predictedPosition.y - localPlayer.position.y;
+            const dz = predictedPosition.z - localPlayer.position.z;
+            const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+            // Calculate angle to target (15° cone targeting)
             const playerForward = new ThreeDEngine.Vector3(0, 0, -1)
                 .applyQuaternion(localPlayer.quaternion);
             const toTarget = new ThreeDEngine.Vector3()
@@ -667,15 +722,15 @@
                 .normalize();
             const angle = Math.acos(playerForward.dot(toTarget)) * (180 / Math.PI);
 
-            if (screenDistance < minimumDistance && !targetLockActive && angle < 90) {
+            // Target closest player within 15° cone
+            if (!targetLockActive && angle < 15 && distance < minimumDistance) {
                 currentTarget = entity;
-                minimumDistance = screenDistance;
+                minimumDistance = distance;
             }
         }
 
         for (let i = 0; i < playerEntities.length; i++) {
                 const entity = playerEntities[i];
-                // Keep visualization boxes always drawn on top by reassigning material (guards against lost refs)
                 entity.visualizationBox.material = (entity === currentTarget)
                     ? greenBoxMaterial
                 : visualizationMaterial;
@@ -779,6 +834,16 @@
     window.addEventListener('keydown', function(event) {
         if (systemUtils.document.activeElement &&
             systemUtils.document.activeElement.value !== undefined) return;
+
+        if (event.code === 'BracketLeft') {
+            config.verticalAdjustment = Math.max(-50, config.verticalAdjustment - 0.25);
+            updateVerticalAdjustmentDisplay();
+            saveConfiguration();
+        } else if (event.code === 'BracketRight') {
+            config.verticalAdjustment = Math.min(50, config.verticalAdjustment + 0.25);
+            updateVerticalAdjustmentDisplay();
+            saveConfiguration();
+        }
     });
 
     window.addEventListener('keyup', function(event) {
